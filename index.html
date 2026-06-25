@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rekindle — Marriage Coaching with Dr. Peter DeBry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:    #1A1410;
+      --ember:  #D95C28;
+      --cream:  #FAF7F2;
+      --warm:   #F0EAE0;
+      --muted:  #9A8E86;
+      --text:   #2E2420;
+      --soft:   #7A6A60;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--cream);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 6vw;
+      background: rgba(250,247,242,0.96);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(26,20,16,0.06);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+    }
+    nav.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }    .nav-links {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+    }
+    .nav-link {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--soft);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: var(--ink); }
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .nav-logo-img {
+      height: 52px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+    .nav-cta {
+      background: var(--ember);
+      color: white;
+      text-decoration: none;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: #be4f22; }
+
+    .btn-ember {
+      display: inline-block;
+      background: var(--ember);
+      color: white !important;
+      text-decoration: none;
+      padding: 0.9rem 2rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .btn-ember:hover { background: #be4f22; }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      height: 100vh;
+      min-height: 600px;
+      overflow: hidden;
+    }
+    .hero video {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: 0;
+    }
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to right,
+        rgba(26,20,16,0.78) 0%,
+        rgba(26,20,16,0.45) 55%,
+        rgba(26,20,16,0.1) 100%
+      );
+      z-index: 1;
+    }
+    /* Hero fade overlay */
+    .hero-fade {
+      position: absolute;
+      inset: 0;
+      background: black;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 3s ease;
+      pointer-events: none;
+    }
+    .hero-fade.in { opacity: 1; }
+
+    /* Hero content */
+    .hero-content {
+      position: absolute;
+      bottom: 12vh;
+      left: 6vw;
+      z-index: 3;
+      max-width: 560px;
+    }
+    .hero-h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 5.5vw, 5.5rem);
+      font-weight: 300;
+      line-height: 1.05;
+      color: white;
+      margin-bottom: 1.5rem;
+    }
+    .hero-h1 .accent {
+      display: block;
+      font-style: italic;
+      color: var(--ember);
+    }
+    .hero-sub {
+      font-size: 1rem;
+      line-height: 1.75;
+      color: rgba(255,255,255,0.65);
+      margin-bottom: 2rem;
+      max-width: 44ch;
+      transition: opacity 0.6s ease;
+    }
+    .hero-sub.hidden { opacity: 0; }
+
+    /* Push-in text — appears after black */
+    .hero-push {
+      position: absolute;
+      top: 50%;
+      left: 6vw;
+      transform: translateY(-50%);
+      z-index: 4;
+      max-width: 88vw;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      pointer-events: none;
+    }
+    .hero-push.in {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .push-h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(4rem, 7vw, 8rem);
+      font-weight: 300;
+      line-height: 1.05;
+      color: white;
+      margin-bottom: 1.25rem;
+      min-height: 2em;
+    }
+    .push-h1 .accent {
+      display: block;
+      font-style: italic;
+      color: var(--ember);
+    }
+    .push-sub {
+      font-size: 1.15rem;
+      line-height: 1.75;
+      color: rgba(255,255,255,0.78);
+      max-width: 48ch;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    .push-sub.in { opacity: 1; }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 25%;
+      background: linear-gradient(to bottom, 
+        rgba(245,240,232,0) 0%,
+        rgba(245,240,232,0.05) 25%,
+        rgba(245,240,232,0.35) 60%,
+        rgba(245,240,232,0.9) 85%,
+        rgba(245,240,232,1) 100%);
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+    .hero.faded::after { opacity: 1; }
+    .hero-logo-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      text-align: center;
+      opacity: 1;
+      transition: opacity 1s ease;
+      pointer-events: none;
+    }
+    .hero-logo-overlay.hidden { opacity: 0; }
+    .hero-logo-img {
+      width: 260px;
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(232,98,42,0.5)) drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+    }
+    .hero-arrow {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 4;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    .hero-arrow.in { opacity: 1; }
+    .hero-arrow svg {
+      width: 28px;
+      height: 28px;
+      color: rgba(255,255,255,0.35);
+      animation: bounce 2s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
+      display: inline-block;
+      background: var(--ember);
+      color: white;
+      text-decoration: none;
+      padding: 0.9rem 2rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: background 0.2s;
+    }
+    .btn-ember:hover { background: #be4f22; }
+    .btn-ghost {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255,255,255,0.25);
+      padding-bottom: 2px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-ghost:hover { color: white; border-color: white; }
+
+    /* word animation */
+    .hero-h1 .w {
+      display: inline;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .hero-h1 .w.in { opacity: 1; transform: none; }
+
+    /* REVEAL */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.in { opacity: 1; transform: none; }
+    .d1 { transition-delay: 0.1s; }
+    .d2 { transition-delay: 0.2s; }
+    .d3 { transition-delay: 0.3s; }
+
+    /* EYEBROW */
+    .eyebrow {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ember);
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    /* SECTION: TRUTH */
+    .truth {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 600px;
+    }
+    .truth-img {
+      overflow: hidden;
+    }
+    .truth-img img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+      transition: transform 1s ease;
+    }
+    .truth-img:hover img { transform: scale(1.04); }
+    .truth-copy {
+      background: white;
+      padding: 6rem 5vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .truth-h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 3vw, 3rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.75rem;
+    }
+    .truth-h2 em { font-style: italic; color: var(--ember); }
+    .truth-p {
+      font-size: 1rem;
+      line-height: 1.85;
+      color: var(--soft);
+      margin-bottom: 1.25rem;
+    }
+
+    /* SECTION: DISTANCE (full bleed image) */
+    .distance {
+      position: relative;
+      height: 320px;
+      overflow: hidden;
+    }
+    .distance img,
+    .distance video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center 20%;
+      display: block;
+    }
+    .distance-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(26,20,16,0.45);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .distance-headline {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 6vw, 6rem);
+      font-weight: 300;
+      font-style: italic;
+      color: white;
+      margin-bottom: 0.75rem;
+    }
+    .distance-sub {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.55);
+      letter-spacing: 0.06em;
+    }
+
+    /* SECTION: OBJECTIONS */
+    .objections {
+      background: var(--ink);
+      padding: 4rem 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .obj-top {
+      margin-bottom: 1.5rem;
+      padding: 0 6vw 1.5rem;
+    }
+    .obj-h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.4rem, 3.5vw, 3.8rem);
+      font-weight: 300;
+      color: white;
+      white-space: nowrap;
+    }
+    .ticker-wrap {
+      overflow-x: scroll;
+      cursor: grab;
+      padding: 0;
+      position: relative;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      scrollbar-width: none;
+    }
+    .ticker-wrap::-webkit-scrollbar { display: none; }
+    .ticker-track {
+      display: flex;
+      gap: 0;
+      width: max-content;
+      animation: ticker 60s linear infinite;
+    }
+    .ticker-track.paused { animation-play-state: paused; }
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      padding: 1.5rem 3.5rem;
+      white-space: nowrap;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    .ticker-item:hover .ticker-q { color: var(--ember); }
+    .ticker-q {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: white;
+      transition: color 0.2s;
+    }
+    .ticker-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--ember);
+      border-radius: 50%;
+      margin-right: 1.5rem;
+      flex-shrink: 0;
+    }
+    .obj-answer-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s ease;
+      background: rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .obj-answer-panel.open { max-height: 200px; }
+    .obj-answer-inner {
+      padding: 2rem 6vw;
+      display: flex;
+      gap: 4rem;
+      align-items: baseline;
+    }
+    .obj-answer-q {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--ember);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .obj-answer-a {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* SECTION: EMBER AI */
+    .ember-ai {
+      background: var(--ink);
+      padding: 6rem 6vw;
+    }
+    .ember-ai-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: center;
+    }
+    .ember-ai-left .eyebrow { color: rgba(255,255,255,0.4); }
+    .ember-ai-h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.4rem, 3.5vw, 3.8rem);
+      font-weight: 300;
+      line-height: 1.15;
+      color: white;
+      margin-bottom: 1.25rem;
+    }
+    .ember-ai-h2 em { font-style: italic; color: var(--ember); }
+    .ember-ai-sub {
+      font-size: 1rem;
+      line-height: 1.85;
+      color: rgba(255,255,255,0.65);
+      margin-bottom: 2.5rem;
+    }
+    .ember-features {
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .ember-feature {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+    .ember-feature-icon {
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(217,92,40,0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--ember);
+    }
+    .ember-feature-icon svg { width: 18px; height: 18px; }
+    .ember-feature-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.02em;
+    }
+    .ember-feature-body {
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.4);
+    }
+    .ember-bottom {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .ember-note {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.3);
+    }
+
+    /* Chat window */
+    .ember-chat-window {
+      background: #FAF7F2;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+      margin: 1rem 0;
+    }
+    .ember-chat-header {
+      background: white;
+      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      border-bottom: 1px solid rgba(26,20,16,0.07);
+    }
+    .ember-chat-avatar {
+      width: 38px;
+      height: 38px;
+      background: var(--ember);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      font-style: italic;
+      color: white;
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+    .ember-chat-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .ember-chat-status {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .ember-chat-body {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      height: 480px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    .ember-typing {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: var(--ember);
+      border-radius: 14px 14px 4px 14px;
+      align-self: flex-end;
+      width: fit-content;
+    }
+    .ember-typing span {
+      width: 6px;
+      height: 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 50%;
+      animation: typingDot 1.2s ease-in-out infinite;
+    }
+    .ember-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .ember-typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingDot {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+    .ember-msg {
+      max-width: 82%;
+      padding: 0.85rem 1.1rem;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      border-radius: 14px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .ember-msg.visible { opacity: 1; transform: none; }
+    .ember-msg.user {
+      background: #D9D7D4;
+      color: var(--text);
+      align-self: flex-start;
+      border-radius: 14px 14px 14px 4px;
+    }
+    .ember-msg.ember {
+      background: var(--ember);
+      color: white;
+      align-self: flex-end;
+      border-radius: 14px 14px 4px 14px;
+    }
+    .ember-typing {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-radius: 14px 14px 4px 14px;
+      width: fit-content;
+    }
+    .ember-typing.user-typing {
+      background: #D9D7D4;
+      align-self: flex-start;
+      border-radius: 14px 14px 14px 4px;
+    }
+    .ember-typing.ember-typing-bubble {
+      background: var(--ember);
+      align-self: flex-end;
+    }
+    .ember-typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      animation: typingDot 1.2s ease-in-out infinite;
+    }
+    .ember-typing.user-typing span { background: rgba(0,0,0,0.3); }
+    .ember-typing.ember-typing-bubble span { background: rgba(255,255,255,0.7); }
+    .ember-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .ember-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* SECTION: PROCESS */
+    .process {
+      background: var(--cream);
+      padding: 6rem 6vw;
+    }
+    .process-header {
+      margin-bottom: 3rem;
+    }
+    .process-h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.6rem, 4.5vw, 4.5rem);
+      font-weight: 300;
+      line-height: 1.05;
+      color: var(--ink);
+    }
+    .process-h2 em { font-style: italic; color: var(--ember); }
+    .process-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      border-top: 1px solid rgba(26,20,16,0.1);
+    }
+    .step {
+      padding: 2.5rem 2rem 2.5rem 0;
+      border-right: 1px solid rgba(26,20,16,0.1);
+    }
+    .step:last-child { border-right: none; padding-right: 0; }
+    .step + .step { padding-left: 2rem; }
+    .step-n {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 4rem;
+      font-weight: 300;
+      color: rgba(217,92,40,0.6);
+      line-height: 1;
+      margin-bottom: 1.25rem;
+    }
+    .step-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--ink);
+      margin-bottom: 0.85rem;
+      line-height: 1.2;
+    }
+    .step-body {
+      font-size: 0.9rem;
+      line-height: 1.85;
+      color: var(--soft);
+    }
+
+        /* SECTION: TESTIMONIAL */
+    .testimonial {
+      background: var(--ember);
+      padding: 6rem 6vw;
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+    .testimonial-mark {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 8rem;
+      font-weight: 300;
+      color: rgba(255,255,255,0.25);
+      line-height: 0.75;
+    }
+    .testimonial-q {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.6rem, 2.8vw, 2.6rem);
+      font-weight: 300;
+      line-height: 1.45;
+      color: white;
+      margin-bottom: 2rem;
+    }
+    .testimonial-who {
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* SECTION: PHYSICIAN */
+    .physician {
+      background: white;
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      min-height: 680px;
+    }
+    .physician-photo {
+      overflow: hidden;
+      position: relative;
+    }
+    .physician-photo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+      filter: grayscale(15%);
+    }
+    .physician-copy {
+      padding: 6rem 5vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .physician-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2rem, 3vw, 3rem);
+      font-weight: 400;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+      line-height: 1.1;
+    }
+    .physician-creds {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2rem;
+      line-height: 1.7;
+    }
+    .physician-p {
+      font-size: 1rem;
+      line-height: 1.85;
+      color: var(--soft);
+      margin-bottom: 1.25rem;
+    }
+    .physician-stats {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 0;
+      margin-top: 2.5rem;
+      padding-top: 2.5rem;
+      border-top: 1px solid rgba(26,20,16,0.1);
+    }
+    .stat { padding-right: 2rem; }
+    .stat + .stat {
+      padding-left: 2rem;
+      border-left: 1px solid rgba(26,20,16,0.1);
+    }
+    .stat-n {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3rem;
+      font-weight: 300;
+      color: var(--ember);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .stat-l {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* SECTION: CTA */
+    .cta {
+      background: var(--ink);
+      padding: 6rem 6vw;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+    .cta-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .cta-right {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .cta-contacts {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin: 2rem 0 2.5rem;
+    }
+    .cta-contact-item {}
+    .cta-contact-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ember);
+      margin-bottom: 0.3rem;
+    }
+    .cta-contact-value {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.6;
+    }
+    .cta-map {
+      width: 100%;
+      height: 380px;
+      overflow: hidden;
+      border-radius: 4px;
+    }
+    .cta-map iframe {
+      width: 100%;
+      height: 380px;
+      display: block;
+    }
+    .cta-h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(3rem, 5.5vw, 6rem);
+      font-weight: 300;
+      color: white;
+      line-height: 1.05;
+      margin-bottom: 0;
+    }
+    .cta-h2 em { font-style: italic; color: var(--ember); }
+    .cta-sub {
+      font-size: 1.05rem;
+      line-height: 1.8;
+      color: rgba(255,255,255,0.55);
+      max-width: 44ch;
+    }
+    .cta-note {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.3);
+      margin-top: 1rem;
+      letter-spacing: 0.06em;
+    }
+
+    /* FOOTER */
+    footer {
+      background: white;
+      padding: 2rem 6vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(26,20,16,0.08);
+    }
+    .footer-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      color: var(--ink);
+    }
+    .footer-logo em { color: var(--ember); font-style: normal; }
+    .footer-copy { font-size: 0.7rem; color: var(--ink); }
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(217,92,40,0.08);
+      border: 1px solid rgba(217,92,40,0.2);
+      padding: 0.4rem 0.9rem;
+      margin-bottom: 1rem;
+    }
+    .vitality-badge-text {
+      font-size: 0.72rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--soft);
+    }
+    .vitality-badge-text strong {
+      color: var(--ember);
+      font-weight: 600;
+    }
+    .footer-division {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 0.08em;
+    }
+
+    /* MOBILE */
+    @media (max-width: 860px) {
+      nav { padding: 1.25rem 1.5rem; }
+      .hero-content { left: 1.5rem; right: 1.5rem; bottom: 8vh; max-width: none; }
+
+      .truth { grid-template-columns: 1fr; }
+      .truth-img { height: 340px; }
+      .truth-copy { padding: 3.5rem 1.5rem; }
+
+      .distance { height: 320px; }
+
+      .objections { padding: 4rem 1.5rem; }
+      .obj-grid { grid-template-columns: 1fr; }
+      .obj-item:nth-child(even) { padding-left: 0; border-left: none; }
+      .obj-item:nth-last-child(-n+2) { border-bottom: 1px solid rgba(255,255,255,0.07); }
+      .obj-item:last-child { border-bottom: none; }
+      .obj-h2 { white-space: normal; }
+
+      .ember-ai { padding: 4rem 1.5rem; }
+      .ember-ai-inner { grid-template-columns: 1fr; gap: 3rem; }
+      .ember-bottom { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+
+      .process { padding: 4rem 1.5rem; }
+      .process-header { margin-bottom: 2rem; }
+      .process-steps { grid-template-columns: 1fr 1fr; }
+      .step:nth-child(even) { border-right: none; }
+      .step:nth-child(3), .step:nth-child(4) { border-top: 1px solid rgba(26,20,16,0.1); padding-top: 2rem; }
+
+      .testimonial { grid-template-columns: 1fr; gap: 1rem; padding: 4rem 1.5rem; }
+      .testimonial-mark { font-size: 5rem; }
+
+      .physician { grid-template-columns: 1fr; }
+      .physician-photo { height: 380px; }
+      .physician-copy { padding: 3.5rem 1.5rem; }
+      .physician-stats { grid-template-columns: repeat(3,1fr); }
+
+      .cta { padding: 5rem 1.5rem; }
+      footer { flex-direction: column; gap: 0.75rem; padding: 1.5rem; text-align: center; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .w, .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="mainNav">
+    <a href="#" class="logo"><img src="rekindle-icon.png" alt="Rekindle" class="nav-logo-img" /></a>
+    <div class="nav-links">
+      <a href="#truth" class="nav-link">About</a>
+      <a href="#how" class="nav-link">How It Works</a>
+      <a href="#ember-ai" class="nav-link">Ember AI</a>
+      <a href="#physician" class="nav-link">Dr. DeBry</a>
+      <a href="#cta" class="nav-cta">Book a Free Call</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <video autoplay muted loop playsinline>
+      <source src="hero.mp4" type="video/mp4">
+    </video>
+    <div class="hero-logo-overlay" id="heroLogoOverlay">
+      <img src="rekindle-logo.png" alt="Rekindle" class="hero-logo-img" />
+    </div>
+
+    <div class="hero-fade" id="heroFade"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-push" id="heroPush">
+      <h2 class="push-h1"></h2>
+      <p class="push-sub">For couples who have drifted apart, and the ones in full crisis. This is where people come when they're not ready to give up.</p>
+    </div>
+  </section>
+    </div>
+  </section>
+
+  <!-- TRUTH -->
+  <section class="truth">
+    <div class="truth-img reveal">
+      <img src="couple-truth.jpg" alt="Couple embracing" />
+    </div>
+    <div class="truth-copy">
+      <h2 class="truth-h2 reveal">You haven't fallen out of love.<br>You've fallen out of <em>practice.</em></h2>
+      <p class="truth-p reveal d1">Most couples don't end because love runs out. They end because small disconnects go unaddressed long enough that they start to feel permanent. The silence at dinner. The nights facing opposite walls. The conversations that go nowhere.</p>
+      <p class="truth-p reveal d2">Those patterns are learned. Which means they can be unlearned. Not with generic advice or worksheets, but with someone who will get into the real dynamics of your relationship and help you find your way back to each other.</p>
+    </div>
+  </section>
+
+  <!-- OBJECTIONS -->
+  <section class="objections">
+    <div class="obj-top">
+      <h2 class="obj-h2 reveal">We hear it <em style="font-style:italic; color:var(--ember);">every single time...</em></h2>
+    </div>
+    <div class="ticker-wrap" id="tickerWrap">
+      <div class="ticker-track" id="tickerTrack">
+        <div class="ticker-item" data-index="0"><div class="ticker-dot"></div><span class="ticker-q">"We've tried counseling before and it didn't work."</span></div>
+        <div class="ticker-item" data-index="1"><div class="ticker-dot"></div><span class="ticker-q">"My partner won't do this with me."</span></div>
+        <div class="ticker-item" data-index="2"><div class="ticker-dot"></div><span class="ticker-q">"Things are too far gone."</span></div>
+        <div class="ticker-item" data-index="3"><div class="ticker-dot"></div><span class="ticker-q">"We're not in crisis, but we're not really connected either."</span></div>
+        <div class="ticker-item" data-index="4"><div class="ticker-dot"></div><span class="ticker-q">"We've been together so long — can anything really change?"</span></div>
+        <div class="ticker-item" data-index="5"><div class="ticker-dot"></div><span class="ticker-q">"I'm not sure I even want to save it anymore."</span></div>
+        <div class="ticker-item" data-index="6"><div class="ticker-dot"></div><span class="ticker-q">"We've tried everything."</span></div>
+        <div class="ticker-item" data-index="7"><div class="ticker-dot"></div><span class="ticker-q">"I don't want to air our issues to a stranger."</span></div>
+        <!-- Duplicate for seamless loop -->
+        <div class="ticker-item" data-index="0"><div class="ticker-dot"></div><span class="ticker-q">"We've tried counseling before and it didn't work."</span></div>
+        <div class="ticker-item" data-index="1"><div class="ticker-dot"></div><span class="ticker-q">"My partner won't do this with me."</span></div>
+        <div class="ticker-item" data-index="2"><div class="ticker-dot"></div><span class="ticker-q">"Things are too far gone."</span></div>
+        <div class="ticker-item" data-index="3"><div class="ticker-dot"></div><span class="ticker-q">"We're not in crisis, but we're not really connected either."</span></div>
+        <div class="ticker-item" data-index="4"><div class="ticker-dot"></div><span class="ticker-q">"We've been together so long — can anything really change?"</span></div>
+        <div class="ticker-item" data-index="5"><div class="ticker-dot"></div><span class="ticker-q">"I'm not sure I even want to save it anymore."</span></div>
+        <div class="ticker-item" data-index="6"><div class="ticker-dot"></div><span class="ticker-q">"We've tried everything."</span></div>
+        <div class="ticker-item" data-index="7"><div class="ticker-dot"></div><span class="ticker-q">"I don't want to air our issues to a stranger."</span></div>
+      </div>
+    </div>
+    <div class="obj-answer-panel" id="objAnswerPanel">
+      <div class="obj-answer-inner">
+        <p class="obj-answer-q" id="objAnswerQ"></p>
+        <p class="obj-answer-a" id="objAnswerA"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DISTANCE -->  <!-- DISTANCE -->
+  <div class="distance reveal">
+    <img src="couple-distance.jpg" alt="Couple sitting apart on phones" />
+    <div class="distance-overlay">
+      <p class="distance-headline">Look familiar?</p>
+    </div>
+  </div>
+
+  <!-- EMBER AI -->
+  <section class="ember-ai" id="ember-ai">
+    <div class="ember-ai-inner">
+      <div class="ember-ai-left reveal">
+        <h2 class="ember-ai-h2">Meet <em>Ember...</em><br>your AI relationship guide.</h2>
+        <p class="ember-ai-sub">Between sessions, in the middle of a hard moment, or when you just need to think something through — Ember is there. Always listening, always ready to help you prepare for difficult conversations and keep moving forward.</p>
+        <div class="ember-features">
+          <div class="ember-feature reveal d1">
+            <div class="ember-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>
+            </div>
+            <div>
+              <p class="ember-feature-title">Available 24/7</p>
+              <p class="ember-feature-body">Ask Ember anything about your relationship at any hour. Get honest, grounded guidance without judgment.</p>
+            </div>
+          </div>
+          <div class="ember-feature reveal d2">
+            <div class="ember-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </div>
+            <div>
+              <p class="ember-feature-title">Guided exercises between sessions</p>
+              <p class="ember-feature-body">Ember assigns tailored exercises so you're practicing what you learn in real life, not just in the session room.</p>
+            </div>
+          </div>
+          <div class="ember-feature reveal d3">
+            <div class="ember-feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <p class="ember-feature-title">Conversation prep</p>
+              <p class="ember-feature-body">Walk into hard conversations with the right words. Ember helps you get clear before you speak.</p>
+            </div>
+          </div>
+        </div>
+        <div class="ember-bottom reveal">
+          <a href="#cta" class="btn-ember">Try Ember Free</a>
+          <p class="ember-note">No account needed to start</p>
+        </div>
+      </div>
+
+      <div class="ember-ai-right reveal d1">
+        <div class="ember-chat-window">
+          <div class="ember-chat-header">
+            <div class="ember-chat-avatar">E</div>
+            <div>
+              <p class="ember-chat-name">Ember</p>
+              <p class="ember-chat-status">AI Relationship Guide · Online</p>
+            </div>
+          </div>
+          <div class="ember-chat-body" id="emberChatBody">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="process" id="how">
+    <div class="process-header">
+      <h2 class="process-h2 reveal">How this <em>actually</em> works</h2>
+    </div>
+    <div class="process-steps">
+      <div class="step reveal">
+        <div class="step-n">01</div>
+        <h3 class="step-title">An honest conversation</h3>
+        <p class="step-body">We start with a free 45-minute call with no agenda and no pressure. You tell me what's going on and I tell you what I see.</p>
+      </div>
+      <div class="step reveal d1">
+        <div class="step-n">02</div>
+        <h3 class="step-title">A plan built for you</h3>
+        <p class="step-body">If we're a fit, we build a roadmap specific to your relationship, your history, and the patterns that have taken hold.</p>
+      </div>
+      <div class="step reveal d2">
+        <div class="step-n">03</div>
+        <h3 class="step-title">Real work, real change</h3>
+        <p class="step-body">We meet regularly, track what's shifting, and adjust as we go. Not a better version of what you had — something stronger.</p>
+      </div>
+      <div class="step reveal d3">
+        <div class="step-n">04</div>
+        <h3 class="step-title">Stay connected with Ember</h3>
+        <p class="step-body">Between sessions, Ember keeps you on track — ready to listen, help you prepare, and make sure nothing goes unsaid.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL -->
+  <section class="testimonial">
+    <div class="testimonial-mark">"</div>
+    <div>
+      <p class="testimonial-q reveal">We came in thinking we were two months from divorce.<br>We left knowing we were capable of something we'd never had, not even in the beginning.</p>
+      <p class="testimonial-who reveal d1">Marcus &amp; Diana · Married 11 years</p>
+    </div>
+  </section>
+
+  <!-- PHYSICIAN -->
+  <section class="physician" id="physician">
+    <div class="physician-copy">
+      <h2 class="physician-name reveal">Dr. Peter W. DeBry, MD</h2>
+      <p class="physician-creds reveal">Board-Certified Physician · American Board of Obesity Medicine · University of Utah, MD · Founder, Vitality Academies</p>
+      <p class="physician-p reveal">Dr. DeBry has spent his career studying one thing: why people struggle to change, and what actually helps them get there. Most of what breaks a marriage is the same thing that breaks a health plan. Patterns. Disconnection. The slow accumulation of small things left unsaid.</p>
+      <p class="physician-p reveal d1">His work with couples comes from the same place as his medical practice, a belief that real change begins with being truly seen and given a plan built around who you actually are, not a template.</p>
+      <div class="physician-stats reveal d2">
+        <div class="stat">
+          <div class="stat-n">47+</div>
+          <div class="stat-l">Couples worked with</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">94%</div>
+          <div class="stat-l">Still together after one year</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n">6</div>
+          <div class="stat-l">Avg sessions to shift</div>
+        </div>
+      </div>
+    </div>
+    <div class="physician-photo reveal">
+      <img src="debry.jpg" alt="Dr. Peter W. DeBry, MD" />
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="cta">
+    <div class="cta-left">
+      <h2 class="cta-h2 reveal">The first step<br>is just <em>one<br>conversation.</em></h2>
+      <div class="cta-contacts reveal">
+        <div class="cta-contact-item">
+          <p class="cta-contact-label">Email</p>
+          <p class="cta-contact-value">info@rekindle.com</p>
+        </div>
+        <div class="cta-contact-item">
+          <p class="cta-contact-label">Visit</p>
+          <p class="cta-contact-value">6140 Brent Thurman Way, Suite 100 · Las Vegas, NV 89148</p>
+        </div>
+        <div class="cta-contact-item">
+          <p class="cta-contact-label">Hours</p>
+          <p class="cta-contact-value">Monday to Friday · 9am to 5pm</p>
+        </div>
+      </div>
+      <a href="#" class="btn-ember reveal" style="align-self: flex-start;">Book Your Free Call</a>
+    </div>
+    <div class="cta-right">
+      <div class="cta-map reveal">
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3224.8540567!2d-115.2321!3d36.0821!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c8c4a0b1f5a0a1%3A0x0!2s6140+Brent+Thurman+Way+Suite+100%2C+Las+Vegas%2C+NV+89148!5e0!3m2!1sen!2sus!4v1234567890"
+          width="100%" height="100%"
+          style="border:0; filter: grayscale(30%);"
+          allowfullscreen="" loading="lazy">
+        </iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <img src="rekindle-icon.png" alt="Rekindle" style="height:32px; object-fit:contain;" />
+    <span class="footer-division">A division of Vitality Academies</span>
+    <span class="footer-copy">© 2026 All rights reserved</span>
+  </footer>
+
+  <script>
+    // Lock scroll immediately on load
+    document.body.style.overflow = 'hidden';
+    const heroVideo = document.querySelector('.hero video');
+    const heroFade = document.getElementById('heroFade');
+    const heroLogoOverlay = document.getElementById('heroLogoOverlay');
+    const heroPush = document.getElementById('heroPush');
+    const pushH1 = heroPush.querySelector('.push-h1');
+    const pushSub = heroPush.querySelector('.push-sub');
+    const heroArrow = document.getElementById('heroArrow');
+
+    const line1 = "What you had isn't gone.";
+    const line2 = "It's waiting.";
+    let sequenceStarted = false;
+
+    function typeText(el, text, speed, cb) {
+      let i = 0;
+      const interval = setInterval(() => {
+        el.textContent += text[i];
+        i++;
+        if (i >= text.length) { clearInterval(interval); if (cb) cb(); }
+      }, speed);
+    }
+
+    heroVideo.addEventListener('timeupdate', () => {
+      if (heroVideo.currentTime >= 3.5 && !sequenceStarted) {
+        sequenceStarted = true;
+        // Fade logo out
+        heroLogoOverlay.classList.add('hidden');
+        // Fade to black
+        setTimeout(() => heroFade.classList.add('in'), 300);
+        // Show push container and start typing
+        setTimeout(() => {
+          pushH1.innerHTML = '';
+          heroPush.classList.add('in');
+          const span1 = document.createElement('span');
+          span1.className = 'type-line1';
+          pushH1.appendChild(span1);
+          // Type line 1 slowly
+          typeText(span1, line1, 90, () => {
+            // Pause between lines
+            setTimeout(() => {
+              pushH1.appendChild(document.createElement('br'));
+              const span2 = document.createElement('span');
+              span2.className = 'accent';
+              pushH1.appendChild(span2);
+              // Type line 2 even slower
+              typeText(span2, line2, 110, () => {
+                setTimeout(() => {
+                  pushSub.classList.add('in');
+                  // Unlock scroll after body copy fades in
+                  setTimeout(() => {
+                    document.body.style.overflow = '';
+                    document.querySelector('.hero').classList.add('faded');
+                    document.getElementById('mainNav').classList.add('visible');
+                    heroArrow.classList.add('in');
+                  }, 1200);
+                }, 600);
+              });
+            }, 400);
+          });
+        }, 1200);
+      }
+    });
+
+    
+    const words = ["What","you","had","isn't","gone.","\n","It's","waiting."];
+    // Live Ember chat animation
+    const chatMessages = [
+      { type: 'user', text: "We haven't really talked in weeks. I don't even know where to start.", delay: 1000 },
+      { type: 'ember', text: "That takes courage to say. When did you first notice the distance starting?", delay: 4000 },
+      { type: 'user', text: "Probably after the argument in March. We never really resolved it.", delay: 8000 },
+      { type: 'ember', text: "That unresolved tension has a way of taking up space. Let's work through what you both might still need from each other.", delay: 12000 },
+      { type: 'user', text: "I just don't want it to turn into another fight.", delay: 17000 },
+      { type: 'ember', text: "I can help you prepare so it doesn't. Want to start by figuring out what you actually want your partner to understand?", delay: 21000 },
+    ];
+
+    const chatBody = document.getElementById('emberChatBody');
+    let chatStarted = false;
+
+    function showTyping(side) {
+      const typing = document.createElement('div');
+      typing.className = side === 'user' ? 'ember-typing user-typing' : 'ember-typing ember-typing-bubble';
+      typing.innerHTML = '<span></span><span></span><span></span>';
+      chatBody.appendChild(typing);
+      chatBody.scrollTop = chatBody.scrollHeight;
+      return typing;
+    }
+
+    function startChat() {
+      if (chatStarted) return;
+      chatStarted = true;
+
+      chatMessages.forEach((msg, i) => {
+        const typingDelay = 2000;
+        // Show typing indicator before each message
+        setTimeout(() => {
+          const typing = showTyping(msg.type);
+          setTimeout(() => {
+            typing.remove();
+            const el = document.createElement('div');
+            el.className = `ember-msg ${msg.type}`;
+            el.textContent = msg.text;
+            chatBody.appendChild(el);
+            requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
+            chatBody.scrollTop = chatBody.scrollHeight;
+          }, typingDelay);
+        }, msg.delay - typingDelay);
+      });
+    }
+
+    // Start when ember section scrolls into view
+    const chatObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { startChat(); chatObserver.disconnect(); } });
+    }, { threshold: 0.2 });
+    const emberSection = document.getElementById('ember-ai');
+    if (emberSection) chatObserver.observe(emberSection);
+
+    // Ticker drag to scroll
+    const tickerWrap = document.getElementById('tickerWrap');
+    const tickerTrack = document.getElementById('tickerTrack');
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    // Initialize ticker scroll at midpoint so both directions have room
+    setTimeout(() => {
+      const half = tickerTrack.scrollWidth / 2;
+      tickerWrap.scrollLeft = half / 2;
+    }, 100);
+
+    // Infinite loop reset — both directions
+    tickerWrap.addEventListener('scroll', () => {
+      const half = tickerTrack.scrollWidth / 2;
+      if (tickerWrap.scrollLeft >= half) {
+        tickerWrap.scrollLeft -= half;
+      }
+      if (tickerWrap.scrollLeft < 10) {
+        tickerWrap.scrollLeft += half;
+      }
+    });
+
+    tickerWrap.addEventListener('mousedown', (e) => {
+      isDown = true;
+      tickerTrack.classList.add('paused');
+      startX = e.pageX - tickerWrap.offsetLeft;
+      scrollLeft = tickerWrap.scrollLeft;
+      tickerWrap.style.cursor = 'grabbing';
+    });
+    tickerWrap.addEventListener('mouseleave', () => {
+      if (isDown) { isDown = false; tickerWrap.style.cursor = 'grab'; }
+    });
+    tickerWrap.addEventListener('mouseup', () => {
+      isDown = false;
+      tickerWrap.style.cursor = 'grab';
+    });
+    tickerWrap.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - tickerWrap.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      tickerWrap.scrollLeft = scrollLeft - walk;
+    });
+
+    // Touch support
+    tickerWrap.addEventListener('touchstart', (e) => {
+      tickerTrack.classList.add('paused');
+      startX = e.touches[0].pageX;
+      scrollLeft = tickerWrap.scrollLeft;
+    }, { passive: true });
+    tickerWrap.addEventListener('touchmove', (e) => {
+      const x = e.touches[0].pageX;
+      const walk = (startX - x) * 1.5;
+      tickerWrap.scrollLeft = scrollLeft + walk;
+    }, { passive: true });
+    tickerWrap.addEventListener('touchend', () => {
+      tickerTrack.classList.remove('paused');
+    });
+
+    // Ticker objections
+    const answers = [
+      { q: '"We\'ve tried counseling before and it didn\'t work."', a: 'Traditional therapy moves slowly by design. This work moves at the speed of your relationship, direct and built around what\'s actually broken.' },
+      { q: '"My partner won\'t do this with me."', a: 'Most people are willing when the invitation feels safe. And sometimes the shift starts with just one of you.' },
+      { q: '"Things are too far gone."', a: 'That feeling is part of the pain, not the truth. The couples who\'ve come back from the hardest places all said the same thing before they started.' },
+      { q: '"We\'re not in crisis, but we\'re not really connected either."', a: 'That quiet distance is easier to address now than after it calcifies. You don\'t need a crisis to justify wanting more.' },
+      { q: '"We\'ve been together so long — can anything really change?"', a: 'Long history doesn\'t mean fixed patterns. It means there\'s more to work with. Couples together 20 years have rebuilt things they didn\'t think were possible.' },
+      { q: '"I\'m not sure I even want to save it anymore."', a: 'That\'s the most honest place to start. We don\'t begin with commitment — we begin with clarity. You\'ll know more after one conversation than you do right now.' },
+      { q: '"We\'ve tried everything."', a: 'Most couples haven\'t tried this. They\'ve tried talking, fighting, avoiding, and maybe a therapist who moved slowly. This is different in approach and in pace.' },
+      { q: '"I don\'t want to air our issues to a stranger."', a: 'That discomfort is completely normal. The first call is about getting a feel for each other — nothing is shared that you\'re not ready to share.' },
+    ];
+
+    const answerPanel = document.getElementById('objAnswerPanel');
+    const answerQ = document.getElementById('objAnswerQ');
+    const answerA = document.getElementById('objAnswerA');
+    let currentOpen = null;
+
+    document.querySelectorAll('.ticker-item').forEach(item => {
+      item.addEventListener('mouseenter', () => {
+        const idx = parseInt(item.dataset.index);
+        answerQ.textContent = answers[idx].q;
+        answerA.textContent = answers[idx].a;
+        answerPanel.classList.add('open');
+        tickerTrack.classList.add('paused');
+        currentOpen = idx;
+      });
+      item.addEventListener('mouseleave', () => {
+        answerPanel.classList.remove('open');
+        tickerTrack.classList.remove('paused');
+        currentOpen = null;
+      });
+    });
+
+    // Scroll reveal
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);} });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  </script>
+</body>
+</html>
