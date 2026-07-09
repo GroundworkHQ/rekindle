@@ -908,8 +908,20 @@
     }
 
     /* SECTION: CTA */
-    .score-promo { background: var(--warm); padding: 6rem 6vw; text-align: center; }
-    .score-promo-inner { max-width: 640px; margin: 0 auto; }
+    .score-promo { background: var(--warm); padding: 6rem 6vw; }
+    .score-promo-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--cream);
+      border: 1px solid rgba(26,20,16,0.08);
+      box-shadow: 0 24px 60px rgba(26,20,16,0.07);
+      padding: 4rem 3.5rem;
+      text-align: center;
+    }
+    @media (max-width: 600px) {
+      .score-promo { padding: 3.5rem 5vw; }
+      .score-promo-inner { padding: 2.75rem 1.5rem; }
+    }
     .score-promo-eyebrow { color: var(--ember); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; margin-bottom: 1rem; }
     .score-promo-h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 400; color: var(--ink); line-height: 1.15; margin-bottom: 1.25rem; max-width: 22ch; margin-left: auto; margin-right: auto; text-wrap: balance; }
     .score-promo-h2 em { font-style: italic; color: var(--ember); }
