@@ -212,6 +212,22 @@
       transition: opacity 1.2s ease;
     }
     .push-sub.in { opacity: 1; }
+    .hero-cta-row { display: flex; gap: 14px; margin-top: 2rem; flex-wrap: wrap; opacity: 0; transition: opacity 1s ease; }
+    .hero-cta-row.in { opacity: 1; }
+    .btn-ember-ghost {
+      display: inline-block;
+      background: transparent;
+      color: #fff !important;
+      text-decoration: none;
+      padding: 0.9rem 2rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.45);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .btn-ember-ghost:hover { border-color: #fff; background: rgba(255,255,255,0.08); }
 
     .hero.faded::after { opacity: 0; }
     .hero-logo-overlay {
@@ -819,7 +835,7 @@
       background: white;
       display: grid;
       grid-template-columns: 1fr 480px;
-      min-height: 680px;
+      min-height: 560px;
     }
     .physician-photo {
       overflow: hidden;
@@ -891,6 +907,16 @@
     }
 
     /* SECTION: CTA */
+    .score-promo { background: var(--warm); padding: 6rem 6vw; text-align: center; }
+    .score-promo-inner { max-width: 640px; margin: 0 auto; }
+    .score-promo-eyebrow { color: var(--ember); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; margin-bottom: 1rem; }
+    .score-promo-h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 400; color: var(--ink); line-height: 1.15; margin-bottom: 1.25rem; }
+    .score-promo-h2 em { font-style: italic; color: var(--ember); }
+    .score-promo-sub { color: var(--soft); font-size: 1.05rem; line-height: 1.7; max-width: 34rem; margin: 0 auto 1.75rem; text-wrap: balance; }
+    .score-promo-meta { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+    .score-promo-meta span { display: flex; align-items: center; gap: 0.5rem; }
+    .score-promo-meta span::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--ember); display: inline-block; }
+
     .cta {
       background: var(--ink);
       padding: 6rem 6vw;
@@ -1064,6 +1090,7 @@
       <a href="#how" class="nav-link">How It Works</a>
       <a href="#ember-ai" class="nav-link">Ember AI</a>
       <a href="#physician" class="nav-link">Dr. DeBry</a>
+      <a href="score.html" class="nav-link">Marriage Score</a>
       <a href="#cta" class="nav-cta">Book a Free Call</a>
     </div>
     <button class="hamburger" id="hamburger" aria-label="Menu">
@@ -1077,6 +1104,7 @@
     <a href="#how" class="mobile-link">How It Works</a>
     <a href="#ember-ai" class="mobile-link">Ember AI</a>
     <a href="#physician" class="mobile-link">Dr. DeBry</a>
+    <a href="score.html" class="mobile-link">Marriage Score</a>
     <a href="#cta" class="mobile-cta">Book a Free Call</a>
   </div>
 
@@ -1094,6 +1122,10 @@
     <div class="hero-push" id="heroPush">
       <h2 class="push-h1"></h2>
       <p class="push-sub">For couples who have drifted apart, and the ones in full crisis. This is where people come when they're not ready to give up.</p>
+      <div class="hero-cta-row">
+        <a href="#cta" class="btn-ember">Book a Free Call</a>
+        <a href="score.html" class="btn-ember-ghost">Take the 2-Minute Check-Up</a>
+      </div>
     </div>
     <div class="hero-arrow" id="heroArrow">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
@@ -1278,6 +1310,21 @@
     </div>
   </section>
 
+  <!-- MARRIAGE SCORE PROMO -->
+  <section class="score-promo">
+    <div class="score-promo-inner reveal">
+      <p class="score-promo-eyebrow">Not ready to reach out yet?</p>
+      <h2 class="score-promo-h2">Take the free <em>2-minute</em> Marriage Health Score.</h2>
+      <p class="score-promo-sub">Ten honest questions. One clear score. See which part of your relationship is thriving, and the one quietly asking for attention.</p>
+      <div class="score-promo-meta">
+        <span>10 questions</span>
+        <span>~2 minutes</span>
+        <span>Private &amp; judgment-free</span>
+      </div>
+      <a href="score.html" class="btn-ember">Start the Free Check-Up</a>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="cta" id="cta">
     <div class="cta-left">
@@ -1367,6 +1414,8 @@
               typeText(span2, line2, 110, () => {
                 setTimeout(() => {
                   pushSub.classList.add('in');
+                  const heroCtaRow = heroPush.querySelector('.hero-cta-row');
+                  if (heroCtaRow) setTimeout(() => heroCtaRow.classList.add('in'), 500);
                   // Unlock scroll after body copy fades in
                   setTimeout(() => {
                     document.body.style.overflow = '';

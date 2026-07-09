@@ -12,3 +12,4 @@ build/
 *.tsbuildinfo
 coverage/
 supabase/.temp/
+.vercel
