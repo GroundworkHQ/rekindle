@@ -1321,7 +1321,7 @@
         <span>~2 minutes</span>
         <span>Private &amp; judgment-free</span>
       </div>
-      <a href="score.html" class="btn-ember">Start the Free Check-Up</a>
+      <a href="score.html" class="btn-ember">See What's Still There</a>
     </div>
   </section>
 
@@ -1365,8 +1365,8 @@
   </footer>
 
   <script>
-    // Lock scroll immediately on load
-    document.body.style.overflow = 'hidden';
+    // Scroll lock disabled for now — re-enable by uncommenting the line below.
+    // document.body.style.overflow = 'hidden';
     const heroVideo = document.querySelector('.hero video');
     const heroFade = document.getElementById('heroFade');
     const heroLogoOverlay = document.getElementById('heroLogoOverlay');
@@ -1378,6 +1378,22 @@
     const line1 = "What you had isn't gone.";
     const line2 = "It's waiting.";
     let sequenceStarted = false;
+    let revealed = false;
+    function revealSite() {
+      if (revealed) return;
+      revealed = true;
+      document.body.style.overflow = '';
+      document.querySelector('.hero').classList.add('faded');
+      document.getElementById('mainNav').classList.add('visible');
+      heroArrow.classList.add('in');
+    }
+    // Failsafes so a blocked or stalled hero video can never trap scrolling.
+    if (heroVideo.play) { const _p = heroVideo.play(); if (_p && _p.catch) _p.catch(() => revealSite()); }
+    heroVideo.addEventListener('error', revealSite);
+    // If the video isn't actually progressing shortly after load, skip the intro and unlock.
+    setTimeout(() => { if (!sequenceStarted && (heroVideo.paused || heroVideo.currentTime < 0.3)) revealSite(); }, 2500);
+    // Hard backstop in case the sequence starts but stalls mid-animation.
+    setTimeout(revealSite, 12000);
 
     function typeText(el, text, speed, cb) {
       let i = 0;
@@ -1417,12 +1433,7 @@
                   const heroCtaRow = heroPush.querySelector('.hero-cta-row');
                   if (heroCtaRow) setTimeout(() => heroCtaRow.classList.add('in'), 500);
                   // Unlock scroll after body copy fades in
-                  setTimeout(() => {
-                    document.body.style.overflow = '';
-                    document.querySelector('.hero').classList.add('faded');
-                    document.getElementById('mainNav').classList.add('visible');
-                    heroArrow.classList.add('in');
-                  }, 1200);
+                  setTimeout(revealSite, 1200);
                 }, 600);
               });
             }, 400);
