@@ -6,7 +6,7 @@
 Marketing landing page for Rekindle, Dr. Peter DeBry's marriage coaching program. IBS client. Goal is to convert visitors into coaching leads, with an Ember AI chat widget as an interactive engagement point.
 
 ## 2. Stack & accounts
-- Static single-file site — `rekindle.html`, inline CSS/JS, no framework, no build.
+- Static single-file site — `index.html`, inline CSS/JS, no framework, no build.
 - Local assets: `hero.mp4`, `couple-distance.jpg`, `couple-truth.jpg`, `debry.jpg`, logos, icon.
 - Hosting: TBD (not yet deployed to a real domain — fill in when live).
 
@@ -24,7 +24,7 @@ Single HTML document. Sections top to bottom: hero, truth, objections, Ember AI 
 
 ## 6. Conventions
 - Dark ink background, ember-orange accent.
-- Keep it self-contained in `rekindle.html` unless there's a reason to split.
+- Keep it self-contained in `index.html` unless there's a reason to split.
 
 ## 7. Open decisions
 - Hosting target (GitHub Pages vs apex-site flow vs Vercel).
