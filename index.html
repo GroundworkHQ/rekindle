@@ -864,6 +864,11 @@
     }
     .ember-chat-input .ember-mic svg { width: 18px; height: 18px; }
     .ember-chat-input .ember-mic:hover { border-color: var(--ember); color: var(--ember); background: transparent; }
+    .ember-chat-input .ember-mic.convo {
+      background: var(--ember);
+      color: white;
+      border-color: var(--ember);
+    }
     .ember-chat-input .ember-mic.listening {
       background: var(--ember);
       color: white;
@@ -1713,6 +1718,7 @@
         setTimeout(() => input.focus(), 60);
       }
       function closeModal() {
+        stopConvo();
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
@@ -1756,9 +1762,14 @@
           if (!replyEl) addBubble('ember', "I'm having trouble reaching my thoughts right now. Give me a moment and try again.");
         } finally {
           if (typing.parentNode) typing.remove();
-          if (reply) { history.push({ role: 'assistant', content: reply }); speak(reply); }
           sending = false;
           if (sendBtn) sendBtn.disabled = false;
+          if (reply) {
+            history.push({ role: 'assistant', content: reply });
+            speak(reply).then(function () { if (convoMode) startTurn(); });
+          } else if (convoMode) {
+            startTurn();
+          }
           input.focus();
         }
       }
@@ -1780,29 +1791,40 @@
       }
       if (voiceToggle) voiceToggle.addEventListener('click', function () { setVoice(!voiceOn); });
 
-      async function speak(text) {
-        if (!voiceOn || !audio || !text) return;
-        try {
-          const r = await fetch('/api/ember-voice', {
+      function speak(text) {
+        return new Promise(function (resolve) {
+          if (!voiceOn || !audio || !text) { resolve(); return; }
+          fetch('/api/ember-voice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text }),
-          });
-          if (!r.ok) return;
-          const url = URL.createObjectURL(await r.blob());
-          audio.src = url;
-          audio.onended = function () { URL.revokeObjectURL(url); };
-          audio.play().catch(function () {});
-        } catch (e) {}
+          }).then(function (r) {
+            return r.ok ? r.blob() : null;
+          }).then(function (blob) {
+            if (!blob) { resolve(); return; }
+            const url = URL.createObjectURL(blob);
+            audio.src = url;
+            audio.onended = function () { URL.revokeObjectURL(url); resolve(); };
+            audio.onerror = function () { resolve(); };
+            audio.play().catch(function () { resolve(); });
+          }).catch(function () { resolve(); });
+        });
       }
 
-      // Voice input: record the mic and transcribe it server side via
-      // /api/ember-transcribe (ElevenLabs). This avoids Chrome's built in
-      // speech service, which is unreliable. Tap to start, tap again to send.
+      // Hands-free voice conversation. Tap the mic once to start talking with
+      // Ember. Voice activity detection auto-ends your turn when you go quiet,
+      // it transcribes via /api/ember-transcribe (ElevenLabs), Ember replies
+      // and speaks, then it listens again. Tap the mic (or close) to end.
+      let convoMode = false;
+      let micStream = null;
       let mediaRecorder = null;
       let recChunks = [];
       let recording = false;
-      let recTimer = null;
+      let audioCtx = null, analyser = null, vadData = null, vadRAF = null;
+      let spokeThisTurn = false, lastSpeech = 0, turnStart = 0;
+      const SPEECH_THRESHOLD = 0.02;   // RMS above this counts as speech
+      const SILENCE_MS = 1300;         // quiet this long after speech ends the turn
+      const MAX_SILENCE_START = 12000; // no speech at all for this long ends the chat
 
       function blobToBase64(blob) {
         return new Promise(function (resolve, reject) {
@@ -1825,44 +1847,101 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ audio: b64, mimeType: blob.type || 'audio/webm' }),
           });
-          if (!r.ok) { addBubble('ember', "I couldn't quite catch that. Give it another try, or type it out."); return; }
+          if (!r.ok) { if (convoMode) startTurn(); return; }
           const data = await r.json();
           const text = ((data && data.text) || '').trim();
           if (text) send(text);
-          else addBubble('ember', "I didn't catch anything that time. Try again, or type it out.");
+          else if (convoMode) startTurn();
         } catch (e) {
-          addBubble('ember', "Something went wrong hearing you. You can type instead, that always works.");
+          if (convoMode) startTurn();
         }
       }
 
-      async function startRecording() {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          recChunks = [];
-          mediaRecorder = new MediaRecorder(stream);
-          mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
-          mediaRecorder.onstop = function () {
-            if (recTimer) { clearTimeout(recTimer); recTimer = null; }
-            stream.getTracks().forEach(function (t) { t.stop(); });
-            recording = false;
-            micBtn.classList.remove('listening');
-            if (recChunks.length) transcribeAndSend(new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' }));
-          };
-          mediaRecorder.start();
-          recording = true;
-          micBtn.classList.add('listening');
-          recTimer = setTimeout(function () { if (recording && mediaRecorder) mediaRecorder.stop(); }, 60000);
-        } catch (e) {
+      function stopVad() { if (vadRAF) { cancelAnimationFrame(vadRAF); vadRAF = null; } }
+
+      function runVad() {
+        if (!recording || !analyser) return;
+        analyser.getByteTimeDomainData(vadData);
+        let sum = 0;
+        for (let i = 0; i < vadData.length; i++) { const v = (vadData[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / vadData.length);
+        const now = Date.now();
+        if (rms > SPEECH_THRESHOLD) { spokeThisTurn = true; lastSpeech = now; }
+        if (spokeThisTurn && now - lastSpeech > SILENCE_MS) { endTurn(); return; }
+        if (!spokeThisTurn && now - turnStart > MAX_SILENCE_START) { stopConvo(); return; }
+        vadRAF = requestAnimationFrame(runVad);
+      }
+
+      function endTurn() {
+        stopVad();
+        if (mediaRecorder && recording) { try { mediaRecorder.stop(); } catch (e) {} }
+      }
+
+      function startTurn() {
+        if (!convoMode || !micStream) return;
+        recChunks = [];
+        try { mediaRecorder = new MediaRecorder(micStream); }
+        catch (e) { stopConvo(); return; }
+        mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
+        mediaRecorder.onstop = function () {
           recording = false;
           micBtn.classList.remove('listening');
-          addBubble('ember', "I couldn't access your microphone. Allow mic access for this site, or just type. Typing always works.");
+          if (spokeThisTurn && recChunks.length) {
+            transcribeAndSend(new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' }));
+          } else if (convoMode) {
+            startTurn();
+          }
+        };
+        if (!audioCtx) {
+          try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const src = audioCtx.createMediaStreamSource(micStream);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            src.connect(analyser);
+            vadData = new Uint8Array(analyser.fftSize);
+          } catch (e) {}
         }
+        if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(function () {}); }
+        mediaRecorder.start();
+        recording = true;
+        spokeThisTurn = false;
+        turnStart = Date.now();
+        lastSpeech = turnStart;
+        micBtn.classList.add('listening');
+        stopVad();
+        vadRAF = requestAnimationFrame(runVad);
+      }
+
+      async function enterConvo() {
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+          addBubble('ember', "I couldn't access your microphone. Allow mic access for this site, then tap the mic again. You can also just type.");
+          return;
+        }
+        convoMode = true;
+        setVoice(true);
+        micBtn.classList.add('convo');
+        micBtn.title = 'Tap to end voice chat';
+        startTurn();
+      }
+
+      function stopConvo() {
+        if (!convoMode && !micStream) return;
+        convoMode = false;
+        stopVad();
+        if (mediaRecorder && recording) { try { mediaRecorder.stop(); } catch (e) {} }
+        recording = false;
+        if (micStream) { micStream.getTracks().forEach(function (t) { t.stop(); }); micStream = null; }
+        if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; analyser = null; }
+        micBtn.classList.remove('convo', 'listening');
+        micBtn.title = 'Talk to Ember';
       }
 
       if (micBtn && navigator.mediaDevices && window.MediaRecorder) {
         micBtn.addEventListener('click', function () {
-          if (recording) { if (mediaRecorder) mediaRecorder.stop(); }
-          else startRecording();
+          if (convoMode) stopConvo(); else enterConvo();
         });
       } else if (micBtn) {
         micBtn.style.display = 'none';
