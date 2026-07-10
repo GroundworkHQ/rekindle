@@ -33,7 +33,7 @@ Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` previ
 **Realtime voice mode** (in the modal JS IIFE, `startRealtime`/`stopRealtime`/`rtOnEvent`): tapping the mic opens a hands-free orb view over the modal (dark ink bg, captions toggle off by default, top-right X returns to text).
 - **Transport**: browser → `wss://api.x.ai/v1/realtime?model=grok-voice-latest`, auth via subprotocol `["xai-client-secret." + token]`. `session.update` sets voice=Carina, instructions, `server_vad` (native turn-taking + barge-in), PCM16 24k in/out, input transcription on. Mic captured via ScriptProcessor → PCM16 24k base64 → `input_audio_buffer.append`; her `response.output_audio.delta` chunks played gaplessly via scheduled AudioBufferSources.
 - **SAFETY NET** (`rtCheckSafety`): watches the user's live transcript (`conversation.item.input_audio_transcription.*`); on explicit crisis/abuse regex match it flushes Grok's audio and `conversation.item.create` `force_message` makes Ember speak the exact 988 / DV-hotline line, bypassing the model. Belt-and-suspenders over the hardened prompt (Grok has a residual blind spot on intimidation-style abuse). Regex tuned to catch explicit self-harm/abuse and skip divorce/venting false positives.
-- **Orb reactivity**: both sides drive `--orb-level` from a fine ~43ms-window loudness envelope with the same curve (noise floor 0.006, gain 12) — she pulses per syllable and dips between words just like your mic does (a `rtEnv` timeline keyed to playback time; `rtVisFrame` reads the current window). Caption em-dashes sanitized (Grok slips them despite the rule).
+- **Orb reactivity**: both sides drive `--orb-level` from a fine ~43ms-window loudness envelope (noise floor 0.006). Your mic uses gain 12; HER side is dialed calmer (gain 9 + heavier smoothing 0.7/0.3 in `rtVisFrame`) because her synth audio has sharper transients than the noise-suppressed mic and read too twitchy otherwise. `rtEnv` timeline is keyed to playback time; `rtVisFrame` reads the current window. Caption em-dashes sanitized (Grok slips them despite the rule).
 - **History continuity**: starting voice mid-thread seeds the Grok session with the prior turns (`conversation.item.create` per `history` entry) and she continues instead of re-greeting; voice turns (incl. the forced safety line) are committed back into `history` so text↔voice keeps context both ways.
 - **Latency**: realtime speech-to-speech, far below the old ~4s text-pipeline floor. The old text pipeline's parked streaming-STT idea is now moot for voice.
 
@@ -52,6 +52,7 @@ Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` previ
 - Dark ink background, ember-orange accent. No em dashes anywhere in copy.
 - Keep everything self-contained in `index.html` unless there's a reason to split; API logic lives in `api/`.
 - Secrets in env vars only. Commit messages end with the Co-Authored-By line. Don't auto-push — wait for explicit instruction.
+- Mobile reviewed 2026-07-10 at 390px: hero (hamburger nav), Ember orb voice view, and testimonial all good. Testimonial was left-clustered on mobile → now centered/balanced (media query at the `.testimonial` block). Rest of the page not yet swept in depth.
 
 ## 7. Open decisions
 - Canonical home: newest work is on Vercel/GroundworkHQ; the branded domain rekindlemarriage.com runs an older build.
