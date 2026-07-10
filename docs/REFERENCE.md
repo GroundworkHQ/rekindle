@@ -55,6 +55,6 @@ Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` previ
 - Mobile reviewed 2026-07-10 at 390px: hero (hamburger nav), Ember orb voice view, and testimonial all good. Testimonial was left-clustered on mobile → now centered/balanced (media query at the `.testimonial` block). Rest of the page not yet swept in depth.
 
 ## 7. Open decisions
-- Canonical home: newest work is on Vercel/GroundworkHQ; the branded domain rekindlemarriage.com runs an older build.
+- **Canonical home MIGRATION IN PROGRESS (2026-07-10):** moving rekindlemarriage.com from GitHub Pages (Ooak21) to the Vercel `rekindle` project. Can't stay on Pages — the serverless `/api/ember-*` functions require Vercel. Both apex + www added to the Vercel project. Pending: GoDaddy DNS (apex `@` A → `76.76.21.21`; `www` CNAME → `cname.vercel-dns.com`), then remove the custom domain from the Ooak21 Pages settings. Vercel auto-issues SSL after propagation.
 - Whether Ember AI stays inline or becomes a shared widget across IBS clients.
 - Whether Ember gets its own distinct ElevenLabs voice (currently shares Grace's).
