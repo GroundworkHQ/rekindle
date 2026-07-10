@@ -938,7 +938,7 @@
     }
     .ember-orb.listening .ember-orb-core { animation: orbBreathe 3.4s ease-in-out infinite; }
     .ember-orb.thinking .ember-orb-core { animation: orbThink 1.5s ease-in-out infinite; }
-    .ember-orb.speaking .ember-orb-core { animation: orbSpeak 0.85s ease-in-out infinite; }
+    .ember-orb.speaking .ember-orb-core { animation: orbBreathe 2.6s ease-in-out infinite; }
     .ember-orb.speaking::before { opacity: 0.85; }
     @keyframes orbBreathe { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.02); } }
     @keyframes orbThink { 0%, 100% { transform: scale(0.99); opacity: 0.7; } 50% { transform: scale(1.01); opacity: 1; } }
@@ -2007,6 +2007,44 @@
       let pumping = false;
       let activeUrl = null;
       let clipResolve = null;
+      // Speaking visualizer: decode each clip into a loudness envelope and drive
+      // the orb from it (synced to playback) so she animates to her real voice,
+      // like the mic does when you talk. No MediaElementSource, so playback is safe.
+      let decodeCtx = null;
+      let speakEnv = null;          // Float32Array of 0..1 loudness per window
+      const SPEAK_WIN = 0.045;      // seconds per envelope window
+      let speakVisRAF = null, speakVisLvl = 0;
+
+      function computeEnvelope(buf) {
+        const data = buf.getChannelData(0);
+        const win = Math.max(1, Math.floor(buf.sampleRate * SPEAK_WIN));
+        const n = Math.ceil(data.length / win);
+        const env = new Float32Array(n);
+        let peak = 0;
+        for (let i = 0; i < n; i++) {
+          let sum = 0; const start = i * win; const end = Math.min(data.length, start + win);
+          for (let j = start; j < end; j++) sum += data[j] * data[j];
+          env[i] = Math.sqrt(sum / Math.max(1, end - start));
+          if (env[i] > peak) peak = env[i];
+        }
+        if (peak > 0) for (let i = 0; i < n; i++) env[i] = env[i] / peak;
+        return env;
+      }
+      function stopSpeakVis() { if (speakVisRAF) { cancelAnimationFrame(speakVisRAF); speakVisRAF = null; } }
+      function startSpeakVis() {
+        stopSpeakVis();
+        (function frame() {
+          if (!speakActive || barged) { stopSpeakVis(); return; }
+          let target = 0;
+          if (speakEnv && speakEnv.length && audio) {
+            const idx = Math.min(speakEnv.length - 1, Math.floor(audio.currentTime / SPEAK_WIN));
+            target = speakEnv[idx] || 0;
+          }
+          speakVisLvl = speakVisLvl * 0.55 + target * 0.45;
+          setOrbLevel(speakVisLvl);
+          speakVisRAF = requestAnimationFrame(frame);
+        })();
+      }
 
       // Pull the next speakable chunk out of the streamed reply. TTS time scales
       // hard with length, so the FIRST chunk breaks early (at the first clause /
@@ -2072,8 +2110,17 @@
           if (!audio || !blob || !speakActive || barged) { finishClip(); return; }
           const url = URL.createObjectURL(blob);
           activeUrl = url;
+          // Decode this clip into a loudness envelope for the orb (best effort,
+          // does not block or affect playback).
+          speakEnv = null;
+          if (convoMode) {
+            blob.arrayBuffer().then(function (ab) {
+              if (!decodeCtx) { try { decodeCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+              return decodeCtx.decodeAudioData(ab.slice(0));
+            }).then(function (buf) { if (buf) speakEnv = computeEnvelope(buf); }).catch(function () {});
+          }
           audio.src = url;
-          audio.onplay = function () { if (convoMode) { setOrbLevel(0); setOrbState('speaking'); startBargeWatch(); } };
+          audio.onplay = function () { if (convoMode) { setOrbLevel(0); speakVisLvl = 0; setOrbState('speaking'); startSpeakVis(); startBargeWatch(); } };
           audio.onended = function () { finishClip(); };
           audio.onerror = function () { finishClip(); };
           audio.play().catch(function () { finishClip(); });
@@ -2081,6 +2128,8 @@
       }
       function finishClip() {
         stopBargeWatch();
+        stopSpeakVis();
+        speakEnv = null;
         if (activeUrl) { try { URL.revokeObjectURL(activeUrl); } catch (e) {} activeUrl = null; }
         if (clipResolve) { const r = clipResolve; clipResolve = null; r(); }
       }
