@@ -890,7 +890,7 @@
       align-items: center;
       justify-content: center;
       gap: 1.8rem;
-      padding: 2rem 1.5rem 5.5rem;
+      padding: 1.5rem;
       background: radial-gradient(circle at 50% 42%, #241a12 0%, #17110c 62%, #100b08 100%);
       animation: emberFade 0.4s ease;
     }
@@ -965,33 +965,48 @@
       line-height: 1.5;
     }
 
+    .ember-voice-close {
+      position: absolute;
+      top: 0.9rem;
+      right: 1.1rem;
+      z-index: 2;
+      background: none;
+      border: 0;
+      color: rgba(245,240,232,0.4);
+      font-size: 1.7rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0.2rem 0.45rem;
+      transition: color 0.2s;
+    }
+    .ember-voice-close:hover { color: rgba(245,240,232,0.9); }
     .ember-voice-controls {
       position: absolute;
-      bottom: 1.75rem;
+      bottom: 1.5rem;
       left: 0;
       right: 0;
       display: flex;
       justify-content: center;
-      gap: 0.75rem;
+      gap: 0.6rem;
     }
     .ember-voice-btn {
-      border: 1px solid rgba(245,240,232,0.28);
+      border: 1px solid rgba(245,240,232,0.13);
       background: transparent;
-      color: rgba(245,240,232,0.85);
-      padding: 0.55rem 1.25rem;
+      color: rgba(245,240,232,0.48);
+      padding: 0.42rem 1rem;
       border-radius: 999px;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
       font-family: inherit;
       cursor: pointer;
       transition: background 0.2s, border-color 0.2s, color 0.2s;
     }
-    .ember-voice-btn:hover { border-color: var(--ember); color: #fff; }
+    .ember-voice-btn:hover { border-color: rgba(217,92,40,0.7); color: rgba(245,240,232,0.92); }
     .ember-voice-btn[aria-pressed="true"] {
-      background: rgba(217,92,40,0.18);
-      border-color: var(--ember);
-      color: #fff;
+      background: rgba(217,92,40,0.14);
+      border-color: rgba(217,92,40,0.6);
+      color: rgba(245,240,232,0.92);
     }
-    .ember-voice-btn.end:hover { background: var(--ember); border-color: var(--ember); color: #fff; }
+    .ember-voice-btn.end:hover { background: rgba(217,92,40,0.85); border-color: var(--ember); color: #fff; }
 
     /* SECTION: PROCESS */
     .process {
@@ -1650,6 +1665,7 @@
 
       <!-- Pure orb voice view: replaces the chat while a hands-free voice chat is active -->
       <div class="ember-voice-view" id="emberVoiceView" aria-hidden="true">
+        <button type="button" class="ember-voice-close" id="emberVoiceClose" aria-label="Close">&times;</button>
         <div class="ember-orb" id="emberOrb"><span class="ember-orb-core"></span></div>
         <div class="ember-orb-caption" id="emberOrbCaption" aria-live="polite">
           <p class="cap-user" id="emberCapUser"></p>
@@ -1806,6 +1822,7 @@
       const capEmber = document.getElementById('emberCapEmber');
       const captionsToggle = document.getElementById('emberCaptionsToggle');
       const voiceEndBtn = document.getElementById('emberVoiceEnd');
+      const voiceCloseBtn = document.getElementById('emberVoiceClose');
       let captionsOn = false;
       if (!modal || !chatBody || !form || !input) return;
 
@@ -1884,12 +1901,18 @@
         const typing = showTyping();
         let replyEl = null;
         let reply = '';
+        const wantSpeech = voiceOn;
+        let spokenUpto = 0;
+        barged = false;
+        if (wantSpeech) startSpeaking();
+        chatAbort = new AbortController();
 
         try {
           const res = await fetch('/api/ember-chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: history, quiz }),
+            signal: chatAbort.signal,
           });
           if (!res.ok || !res.body) throw new Error('bad response');
 
@@ -1905,17 +1928,29 @@
             replyEl.textContent = reply;
             if (convoMode && capEmber) capEmber.textContent = reply;
             chatBody.scrollTop = chatBody.scrollHeight;
+            // Speak each sentence the moment it finishes streaming so she starts
+            // talking without waiting for the whole reply.
+            if (wantSpeech && !barged) {
+              let c;
+              while ((c = nextSpeakChunk(reply, spokenUpto))) {
+                spokenUpto += c.len;
+                if (c.text) enqueueSpeak(c.text);
+              }
+            }
           }
         } catch (e) {
-          if (!replyEl) addBubble('ember', "I'm having trouble reaching my thoughts right now. Give me a moment and try again.");
+          if (!replyEl && !barged) addBubble('ember', "I'm having trouble reaching my thoughts right now. Give me a moment and try again.");
         } finally {
           if (typing.parentNode) typing.remove();
           sending = false;
           if (sendBtn) sendBtn.disabled = false;
-          if (reply) {
-            history.push({ role: 'assistant', content: reply });
-            speak(reply).then(function () { if (convoMode) startTurn(); });
-          } else if (convoMode) {
+          chatAbort = null;
+          if (reply && !barged) history.push({ role: 'assistant', content: reply });
+          if (wantSpeech && !barged) {
+            const rem = reply.slice(spokenUpto).trim();
+            if (rem) enqueueSpeak(rem);
+            endSpeakingInput();   // no more sentences coming; hand off to listening when the queue drains
+          } else if (convoMode && !barged) {
             startTurn();
           }
           input.focus();
@@ -1939,25 +1974,86 @@
       }
       if (voiceToggle) voiceToggle.addEventListener('click', function () { setVoice(!voiceOn); });
 
-      function speak(text) {
+      // Ember voice output. In a hands-free chat we speak sentence by sentence
+      // as the reply streams in, so she starts talking after the first sentence
+      // instead of waiting for the whole thing. Each clip's audio is fetched
+      // ahead of playback so the gaps between sentences stay small.
+      let speakQueue = [];      // Promise<Blob|null>[] in speaking order
+      let speakActive = false;  // a reply is currently being spoken
+      let speakDone = false;    // the reply text has fully streamed in
+      let pumping = false;
+      let activeUrl = null;
+      let clipResolve = null;
+
+      // Pull the next complete sentence out of the streamed reply.
+      function nextSpeakChunk(full, from) {
+        const rest = full.slice(from);
+        const m = rest.match(/^[\s\S]*?[.!?…](?=["'’”)\]]?(?:\s|$))/);
+        if (!m) return null;
+        const seg = m[0];
+        return { text: seg.trim().length >= 2 ? seg.trim() : '', len: seg.length };
+      }
+
+      function fetchClip(text) {
+        return fetch('/api/ember-voice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        }).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; });
+      }
+
+      function startSpeaking() { speakQueue = []; speakActive = true; speakDone = false; }
+      function enqueueSpeak(text) {
+        if (!speakActive || !voiceOn || !text) return;
+        speakQueue.push(fetchClip(text));   // kick off the network right away
+        pumpSpeak();
+      }
+      function endSpeakingInput() { speakDone = true; maybeFinishSpeaking(); }
+
+      async function pumpSpeak() {
+        if (pumping) return;
+        pumping = true;
+        while (speakActive && !barged && speakQueue.length) {
+          const blob = await speakQueue.shift();
+          if (!speakActive || barged) break;
+          if (blob) await playBlob(blob);
+        }
+        pumping = false;
+        maybeFinishSpeaking();
+      }
+
+      function maybeFinishSpeaking() {
+        if (barged || pumping) return;
+        if (speakActive && speakDone && !speakQueue.length) {
+          speakActive = false;
+          setOrbState(null);
+          if (convoMode) startTurn();
+        }
+      }
+
+      function playBlob(blob) {
         return new Promise(function (resolve) {
-          if (!voiceOn || !audio || !text) { resolve(); return; }
-          fetch('/api/ember-voice', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text }),
-          }).then(function (r) {
-            return r.ok ? r.blob() : null;
-          }).then(function (blob) {
-            if (!blob) { resolve(); return; }
-            const url = URL.createObjectURL(blob);
-            audio.src = url;
-            audio.onplay = function () { if (convoMode) { setOrbLevel(0); setOrbState('speaking'); } };
-            audio.onended = function () { URL.revokeObjectURL(url); resolve(); };
-            audio.onerror = function () { resolve(); };
-            audio.play().catch(function () { resolve(); });
-          }).catch(function () { resolve(); });
+          clipResolve = resolve;
+          if (!audio || !blob || !speakActive || barged) { finishClip(); return; }
+          const url = URL.createObjectURL(blob);
+          activeUrl = url;
+          audio.src = url;
+          audio.onplay = function () { if (convoMode) { setOrbLevel(0); setOrbState('speaking'); startBargeWatch(); } };
+          audio.onended = function () { finishClip(); };
+          audio.onerror = function () { finishClip(); };
+          audio.play().catch(function () { finishClip(); });
         });
+      }
+      function finishClip() {
+        stopBargeWatch();
+        if (activeUrl) { try { URL.revokeObjectURL(activeUrl); } catch (e) {} activeUrl = null; }
+        if (clipResolve) { const r = clipResolve; clipResolve = null; r(); }
+      }
+      function stopSpeaking() {
+        speakQueue = [];
+        speakActive = false;
+        if (audio) { try { audio.pause(); } catch (e) {} }
+        finishClip();
       }
 
       // Hands-free voice conversation. Tap the mic once to start talking with
@@ -1972,9 +2068,50 @@
       let audioCtx = null, analyser = null, vadData = null, vadRAF = null;
       let spokeThisTurn = false, lastSpeech = 0, turnStart = 0;
       let orbLvl = 0;
+      let barged = false;              // she got interrupted this turn
+      let chatAbort = null;            // aborts an in-flight reply on barge-in
+      let bargeRAF = null, bargeStart = 0;
       const SPEECH_THRESHOLD = 0.02;   // RMS above this counts as speech
       const SILENCE_MS = 1000;         // quiet this long after speech ends the turn
       const MAX_SILENCE_START = 12000; // no speech at all for this long ends the chat
+      const BARGE_THRESHOLD = 0.05;    // must clearly beat echo from her own voice
+      const BARGE_MS = 280;            // sustained talking this long cuts her off
+
+      // Barge-in: while she is speaking, watch the mic; if you start talking she
+      // stops, the reply is cut off, and your turn begins. Echo cancellation on
+      // the mic keeps her own voice from tripping this.
+      function stopBargeWatch() { if (bargeRAF) { cancelAnimationFrame(bargeRAF); bargeRAF = null; } }
+      function startBargeWatch() {
+        if (!convoMode || !analyser) return;
+        bargeStart = 0;
+        stopBargeWatch();
+        bargeRAF = requestAnimationFrame(bargeWatch);
+      }
+      function bargeWatch() {
+        if (!analyser || barged || !speakActive) { bargeRAF = null; return; }
+        analyser.getByteTimeDomainData(vadData);
+        let sum = 0;
+        for (let i = 0; i < vadData.length; i++) { const v = (vadData[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / vadData.length);
+        const now = Date.now();
+        if (rms > BARGE_THRESHOLD) {
+          if (!bargeStart) bargeStart = now;
+          else if (now - bargeStart > BARGE_MS) { bargeIn(); return; }
+        } else {
+          bargeStart = 0;
+        }
+        bargeRAF = requestAnimationFrame(bargeWatch);
+      }
+      function bargeIn() {
+        if (barged) return;
+        barged = true;
+        sending = false;
+        stopBargeWatch();
+        if (chatAbort) { try { chatAbort.abort(); } catch (e) {} }
+        stopSpeaking();
+        setOrbState('listening');
+        startTurn();
+      }
 
       function blobToBase64(blob) {
         return new Promise(function (resolve, reject) {
@@ -2074,12 +2211,17 @@
 
       async function enterConvo() {
         try {
-          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Echo cancellation keeps her own voice out of the mic so barge-in
+          // only fires when you actually talk.
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          });
         } catch (e) {
           addBubble('ember', "I couldn't access your microphone. Allow mic access for this site, then tap the mic again. You can also just type.");
           return;
         }
         convoMode = true;
+        barged = false;
         setVoice(true);
         micBtn.classList.add('convo');
         micBtn.title = 'Tap to end voice chat';
@@ -2094,6 +2236,8 @@
       function stopConvo() {
         if (!convoMode && !micStream) return;
         convoMode = false;
+        stopBargeWatch();
+        stopSpeaking();
         stopVad();
         if (mediaRecorder && recording) { try { mediaRecorder.stop(); } catch (e) {} }
         recording = false;
@@ -2113,6 +2257,7 @@
         captionsToggle.setAttribute('aria-pressed', captionsOn ? 'true' : 'false');
       });
       if (voiceEndBtn) voiceEndBtn.addEventListener('click', function () { stopConvo(); });
+      if (voiceCloseBtn) voiceCloseBtn.addEventListener('click', function () { closeModal(); });
 
       if (micBtn && navigator.mediaDevices && window.MediaRecorder) {
         micBtn.addEventListener('click', function () {
