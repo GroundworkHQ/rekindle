@@ -2257,7 +2257,7 @@
         captionsToggle.setAttribute('aria-pressed', captionsOn ? 'true' : 'false');
       });
       if (voiceEndBtn) voiceEndBtn.addEventListener('click', function () { stopConvo(); });
-      if (voiceCloseBtn) voiceCloseBtn.addEventListener('click', function () { closeModal(); });
+      if (voiceCloseBtn) voiceCloseBtn.addEventListener('click', function () { stopConvo(); });
 
       if (micBtn && navigator.mediaDevices && window.MediaRecorder) {
         micBtn.addEventListener('click', function () {
