@@ -903,6 +903,7 @@
       width: 150px;
       height: 150px;
       border-radius: 50%;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2070,20 +2071,24 @@
       let orbLvl = 0;
       let barged = false;              // she got interrupted this turn
       let chatAbort = null;            // aborts an in-flight reply on barge-in
-      let bargeRAF = null, bargeStart = 0;
+      let bargeRAF = null, bargeStart = 0, echoFloor = 0.02;
       const SPEECH_THRESHOLD = 0.02;   // RMS above this counts as speech
       const SILENCE_MS = 1000;         // quiet this long after speech ends the turn
       const MAX_SILENCE_START = 12000; // no speech at all for this long ends the chat
-      const BARGE_THRESHOLD = 0.05;    // must clearly beat echo from her own voice
-      const BARGE_MS = 280;            // sustained talking this long cuts her off
+      const BARGE_MIN = 0.03;          // absolute floor so silence never interrupts
+      const BARGE_FACTOR = 1.9;        // your voice must beat the leaked echo by this much
+      const BARGE_MS = 180;            // sustained talking this long cuts her off
 
       // Barge-in: while she is speaking, watch the mic; if you start talking she
-      // stops, the reply is cut off, and your turn begins. Echo cancellation on
-      // the mic keeps her own voice from tripping this.
+      // stops, the reply is cut off, and your turn begins. The trigger adapts to
+      // however much of her own voice leaks back into the mic (the "echo floor"),
+      // so it fires on you talking rather than on her.
       function stopBargeWatch() { if (bargeRAF) { cancelAnimationFrame(bargeRAF); bargeRAF = null; } }
       function startBargeWatch() {
         if (!convoMode || !analyser) return;
         bargeStart = 0;
+        echoFloor = 0.02;
+        if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume().catch(function () {}); }
         stopBargeWatch();
         bargeRAF = requestAnimationFrame(bargeWatch);
       }
@@ -2094,11 +2099,13 @@
         for (let i = 0; i < vadData.length; i++) { const v = (vadData[i] - 128) / 128; sum += v * v; }
         const rms = Math.sqrt(sum / vadData.length);
         const now = Date.now();
-        if (rms > BARGE_THRESHOLD) {
+        const trigger = Math.max(BARGE_MIN, echoFloor * BARGE_FACTOR);
+        if (rms > trigger) {
           if (!bargeStart) bargeStart = now;
           else if (now - bargeStart > BARGE_MS) { bargeIn(); return; }
         } else {
           bargeStart = 0;
+          echoFloor = echoFloor * 0.9 + rms * 0.1;   // learn the leaked-echo / ambient level
         }
         bargeRAF = requestAnimationFrame(bargeWatch);
       }
@@ -2258,6 +2265,11 @@
       });
       if (voiceEndBtn) voiceEndBtn.addEventListener('click', function () { stopConvo(); });
       if (voiceCloseBtn) voiceCloseBtn.addEventListener('click', function () { stopConvo(); });
+      // Tap the orb while she's talking to interrupt her by hand (always works,
+      // even when the mic can't hear you over her voice).
+      if (orb) orb.addEventListener('click', function () {
+        if (convoMode && speakActive && !barged) bargeIn();
+      });
 
       if (micBtn && navigator.mediaDevices && window.MediaRecorder) {
         micBtn.addEventListener('click', function () {
