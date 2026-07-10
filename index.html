@@ -2362,6 +2362,26 @@
       let rtVisRAF = null, rtSpeakLvl = 0, rtUserLvl = 0;
       let rtSafetyHandled = false, rtGreeted = false;
       let rtVoice = null, rtInstructions = null;
+      let rtCurUser = '', rtCurEmber = '';   // in-progress turn text, committed to `history` for continuity
+
+      // Seed the voice session with the prior (text or earlier voice) conversation
+      // so she continues mid-thread instead of starting over.
+      function rtSeedHistory() {
+        if (!history || !history.length) return false;
+        let seeded = false;
+        history.forEach(function (m) {
+          if (!m || !m.content) return;
+          const isA = m.role === 'assistant';
+          rtSend({ type: 'conversation.item.create', item: { type: 'message', role: isA ? 'assistant' : 'user',
+            content: [{ type: isA ? 'output_text' : 'input_text', text: String(m.content) }] } });
+          seeded = true;
+        });
+        return seeded;
+      }
+      function rtCommitTurn() {
+        if (rtCurUser) { history.push({ role: 'user', content: rtCurUser }); rtCurUser = ''; }
+        if (rtCurEmber && rtCurEmber.trim()) { history.push({ role: 'assistant', content: rtCurEmber.trim() }); rtCurEmber = ''; }
+      }
 
       const CRISIS_RE = /(kill (myself|me)|end(ing)? (my life|it all|everything)|take my (own )?life|don'?t want to (be here|live|wake up)|not want to be here|no reason to (live|go on)|no point (in|to)? ?(living|life|anything|going on)|better off (dead|without me)|want to die|wish i (was|were) dead|hurt myself|harm myself|suicid)/i;
       const ABUSE_RE = /(hits? me|hit me|beats? me|grab(s|bed)? (me|my)|shov(e|es|ed)|punch(es|ed)? (me|the wall)|threw .*(at me|glass|plate|thing|it)|throws things|breaks? things|slap(s|ped)? me|chok(e|ed|ing)|strangl|afraid of (him|her|my (husband|wife|partner|spouse))|scared of (him|her|my)|threaten(s|ed)? me|hurts? me|he'?s (violent|abusive)|she'?s (violent|abusive)|abus(e|ing|ive))/i;
@@ -2420,6 +2440,7 @@
         rtSend({ type: 'input_audio_buffer.clear' });
         rtSend({ type: 'conversation.item.create', item: { type: 'force_message', role: 'assistant', interruptible: false, content: [{ type: 'output_text', text: msg }] } });
         if (capEmber) capEmber.textContent = msg;
+        rtCurEmber = msg;   // capture the forced safety line into history too
       }
 
       function rtOnEvent(e) {
@@ -2435,7 +2456,10 @@
             break;
           case 'session.updated':
             if (!rtGreeted) { rtGreeted = true; setOrbState('speaking');
-              rtSend({ type: 'response.create', response: { instructions: 'Warmly greet the person in one short, caring sentence and invite them to share what is on their mind.' } }); }
+              const cont = rtSeedHistory();
+              rtSend({ type: 'response.create', response: { instructions: cont
+                ? 'You were just talking with this person by text and now you are on a voice call together. In one short, warm sentence let them know you are here and ready to keep going. Do not re-introduce yourself or repeat what was already said.'
+                : 'Warmly greet the person in one short, caring sentence and invite them to share what is on their mind.' } }); }
             break;
           case 'input_audio_buffer.speech_started':
             rtSafetyHandled = false; rtFlushPlayback(); setOrbState('listening');
@@ -2445,19 +2469,20 @@
             break;
           case 'conversation.item.input_audio_transcription.updated':
           case 'conversation.item.input_audio_transcription.completed':
-            if (e.transcript) { if (capUser) capUser.textContent = e.transcript; rtCheckSafety(e.transcript); }
+            if (e.transcript) { rtCurUser = e.transcript; if (capUser) capUser.textContent = e.transcript; rtCheckSafety(e.transcript); }
             break;
           case 'response.created':
-            setOrbState('speaking'); if (capEmber && !rtSafetyHandled) capEmber.textContent = '';
+            setOrbState('speaking'); rtCurEmber = ''; if (capEmber && !rtSafetyHandled) capEmber.textContent = '';
             break;
           case 'response.output_audio_transcript.delta':
-            if (capEmber && !rtSafetyHandled && e.delta) capEmber.textContent += e.delta.replace(/\s*[—–]\s*/g, ', ');
+            if (e.delta) { const clean = e.delta.replace(/\s*[—–]\s*/g, ', '); rtCurEmber += clean; if (capEmber && !rtSafetyHandled) capEmber.textContent += clean; }
             break;
           case 'response.output_audio.delta':
             if (e.delta) rtPlayChunk(e.delta);
             break;
           case 'response.done':
-            setOrbState('listening');
+          case 'response.human_assist_turn.commit':
+            setOrbState('listening'); rtCommitTurn();
             break;
         }
       }
