@@ -880,6 +880,117 @@
       50% { box-shadow: 0 0 0 8px rgba(217,92,40,0); }
     }
 
+    /* PURE ORB VOICE VIEW — takes over the window during a hands-free voice chat */
+    .ember-voice-view {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.8rem;
+      padding: 2rem 1.5rem 5.5rem;
+      background: radial-gradient(circle at 50% 42%, #241a12 0%, #17110c 62%, #100b08 100%);
+      animation: emberFade 0.4s ease;
+    }
+    .ember-modal-window.voice-active .ember-voice-view { display: flex; }
+    @keyframes emberFade { from { opacity: 0; } to { opacity: 1; } }
+
+    .ember-orb {
+      --orb-level: 0;
+      position: relative;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: scale(calc(1 + var(--orb-level) * 0.14));
+      transition: transform 0.09s ease-out;
+      flex-shrink: 0;
+    }
+    /* soft outer glow halo */
+    .ember-orb::before {
+      content: '';
+      position: absolute;
+      inset: -42%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(217,92,40,0.55) 0%, rgba(217,92,40,0.18) 42%, rgba(217,92,40,0) 70%);
+      filter: blur(6px);
+      opacity: calc(0.45 + var(--orb-level) * 0.55);
+      transition: opacity 0.14s ease;
+    }
+    .ember-orb-core {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 32%, #ffd9a8 0%, #f6a04a 18%, #e2661f 46%, #b5401a 78%, #7d2a12 100%);
+      box-shadow:
+        0 0 44px rgba(226,102,31,0.5),
+        inset 0 0 30px rgba(255,180,110,0.45),
+        inset 8px -10px 40px rgba(120,40,15,0.6);
+    }
+    .ember-orb.listening .ember-orb-core { animation: orbBreathe 3.4s ease-in-out infinite; }
+    .ember-orb.thinking .ember-orb-core { animation: orbThink 1.5s ease-in-out infinite; }
+    .ember-orb.speaking .ember-orb-core { animation: orbSpeak 0.85s ease-in-out infinite; }
+    .ember-orb.speaking::before { opacity: 0.85; }
+    @keyframes orbBreathe { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.02); } }
+    @keyframes orbThink { 0%, 100% { transform: scale(0.99); opacity: 0.7; } 50% { transform: scale(1.01); opacity: 1; } }
+    @keyframes orbSpeak { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.05); } }
+
+    .ember-orb-caption {
+      display: none;
+      width: 100%;
+      max-width: 340px;
+      text-align: center;
+      max-height: 32%;
+      overflow-y: auto;
+    }
+    .ember-voice-view.captions-on .ember-orb-caption { display: block; }
+    .ember-orb-caption .cap-user {
+      color: rgba(245,240,232,0.5);
+      font-size: 0.9rem;
+      font-style: italic;
+      margin-bottom: 0.45rem;
+    }
+    .ember-orb-caption .cap-user:empty, .ember-orb-caption .cap-ember:empty { display: none; }
+    .ember-orb-caption .cap-ember {
+      color: #f5f0e8;
+      font-size: 1.02rem;
+      line-height: 1.5;
+    }
+
+    .ember-voice-controls {
+      position: absolute;
+      bottom: 1.75rem;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+    .ember-voice-btn {
+      border: 1px solid rgba(245,240,232,0.28);
+      background: transparent;
+      color: rgba(245,240,232,0.85);
+      padding: 0.55rem 1.25rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .ember-voice-btn:hover { border-color: var(--ember); color: #fff; }
+    .ember-voice-btn[aria-pressed="true"] {
+      background: rgba(217,92,40,0.18);
+      border-color: var(--ember);
+      color: #fff;
+    }
+    .ember-voice-btn.end:hover { background: var(--ember); border-color: var(--ember); color: #fff; }
+
     /* SECTION: PROCESS */
     .process {
       background: var(--cream);
@@ -1534,6 +1645,19 @@
         </button>
       </form>
       <audio id="emberAudio" playsinline></audio>
+
+      <!-- Pure orb voice view: replaces the chat while a hands-free voice chat is active -->
+      <div class="ember-voice-view" id="emberVoiceView" aria-hidden="true">
+        <div class="ember-orb" id="emberOrb"><span class="ember-orb-core"></span></div>
+        <div class="ember-orb-caption" id="emberOrbCaption" aria-live="polite">
+          <p class="cap-user" id="emberCapUser"></p>
+          <p class="cap-ember" id="emberCapEmber"></p>
+        </div>
+        <div class="ember-voice-controls">
+          <button type="button" class="ember-voice-btn" id="emberCaptionsToggle" aria-pressed="false">Captions</button>
+          <button type="button" class="ember-voice-btn end" id="emberVoiceEnd">End voice</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1673,7 +1797,24 @@
       const sendBtn = document.getElementById('emberModalSend');
       const closeBtn = document.getElementById('emberModalClose');
       const backdrop = document.getElementById('emberModalBackdrop');
+      const modalWindow = modal.querySelector('.ember-modal-window');
+      const voiceView = document.getElementById('emberVoiceView');
+      const orb = document.getElementById('emberOrb');
+      const capUser = document.getElementById('emberCapUser');
+      const capEmber = document.getElementById('emberCapEmber');
+      const captionsToggle = document.getElementById('emberCaptionsToggle');
+      const voiceEndBtn = document.getElementById('emberVoiceEnd');
+      let captionsOn = false;
       if (!modal || !chatBody || !form || !input) return;
+
+      function setOrbState(state) {
+        if (!orb) return;
+        orb.classList.remove('listening', 'thinking', 'speaking');
+        if (state) orb.classList.add(state);
+      }
+      function setOrbLevel(v) {
+        if (orb) orb.style.setProperty('--orb-level', String(Math.max(0, Math.min(1, v))));
+      }
 
       const history = [];
       let sending = false;
@@ -1733,6 +1874,10 @@
 
         addBubble('user', text);
         history.push({ role: 'user', content: text });
+        if (convoMode) {
+          if (capUser) capUser.textContent = text;
+          if (capEmber) capEmber.textContent = '';
+        }
 
         const typing = showTyping();
         let replyEl = null;
@@ -1756,6 +1901,7 @@
             if (!replyEl) { typing.remove(); replyEl = addBubble('ember', ''); }
             reply += chunk;
             replyEl.textContent = reply;
+            if (convoMode && capEmber) capEmber.textContent = reply;
             chatBody.scrollTop = chatBody.scrollHeight;
           }
         } catch (e) {
@@ -1804,6 +1950,7 @@
             if (!blob) { resolve(); return; }
             const url = URL.createObjectURL(blob);
             audio.src = url;
+            audio.onplay = function () { if (convoMode) { setOrbLevel(0); setOrbState('speaking'); } };
             audio.onended = function () { URL.revokeObjectURL(url); resolve(); };
             audio.onerror = function () { resolve(); };
             audio.play().catch(function () { resolve(); });
@@ -1866,6 +2013,7 @@
         for (let i = 0; i < vadData.length; i++) { const v = (vadData[i] - 128) / 128; sum += v * v; }
         const rms = Math.sqrt(sum / vadData.length);
         const now = Date.now();
+        setOrbLevel(Math.min(1, rms * 6));
         if (rms > SPEECH_THRESHOLD) { spokeThisTurn = true; lastSpeech = now; }
         if (spokeThisTurn && now - lastSpeech > SILENCE_MS) { endTurn(); return; }
         if (!spokeThisTurn && now - turnStart > MAX_SILENCE_START) { stopConvo(); return; }
@@ -1874,6 +2022,8 @@
 
       function endTurn() {
         stopVad();
+        setOrbLevel(0);
+        if (spokeThisTurn) setOrbState('thinking');
         if (mediaRecorder && recording) { try { mediaRecorder.stop(); } catch (e) {} }
       }
 
@@ -1909,6 +2059,7 @@
         turnStart = Date.now();
         lastSpeech = turnStart;
         micBtn.classList.add('listening');
+        setOrbState('listening');
         stopVad();
         vadRAF = requestAnimationFrame(runVad);
       }
@@ -1924,6 +2075,11 @@
         setVoice(true);
         micBtn.classList.add('convo');
         micBtn.title = 'Tap to end voice chat';
+        if (voiceView) voiceView.setAttribute('aria-hidden', 'false');
+        if (modalWindow) modalWindow.classList.add('voice-active');
+        if (capUser) capUser.textContent = '';
+        if (capEmber) capEmber.textContent = '';
+        setOrbState('thinking');
         startTurn();
       }
 
@@ -1937,7 +2093,18 @@
         if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; analyser = null; }
         micBtn.classList.remove('convo', 'listening');
         micBtn.title = 'Talk to Ember';
+        if (modalWindow) modalWindow.classList.remove('voice-active');
+        if (voiceView) voiceView.setAttribute('aria-hidden', 'true');
+        setOrbState(null);
+        setOrbLevel(0);
       }
+
+      if (captionsToggle) captionsToggle.addEventListener('click', function () {
+        captionsOn = !captionsOn;
+        if (voiceView) voiceView.classList.toggle('captions-on', captionsOn);
+        captionsToggle.setAttribute('aria-pressed', captionsOn ? 'true' : 'false');
+      });
+      if (voiceEndBtn) voiceEndBtn.addEventListener('click', function () { stopConvo(); });
 
       if (micBtn && navigator.mediaDevices && window.MediaRecorder) {
         micBtn.addEventListener('click', function () {
