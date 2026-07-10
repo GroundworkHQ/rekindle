@@ -11,7 +11,7 @@ Marketing landing page for Rekindle, Dr. Peter DeBry's marriage coaching program
 - Local assets: `hero.mp4`, `couple-distance.jpg`, `couple-truth.jpg`, `debry.jpg`, `rekindle-logo.*`, `rekindle-icon.png`.
 - Hosting: **Vercel** — repo `GroundworkHQ/rekindle` auto-deploys to **rekindle-ebon-mu.vercel.app** on push to `main`.
 - Rekindle's real branded domain **rekindlemarriage.com** (`Ooak21/rekindlemarriage.com`, GitHub Pages) runs an OLDER build. Canonical-home decision still open (see §7).
-- Secrets: `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`. Local dev in gitignored `.env.local`; prod in Vercel env vars. ElevenLabs reuses the Gateway/Grace account.
+- Secrets: `ANTHROPIC_API_KEY` (chat), `XAI_API_KEY` (Grok voice — TTS + STT). Local dev in gitignored `.env.local`; prod in Vercel env vars. ElevenLabs was fully replaced by xAI (2026-07-09); `ELEVENLABS_API_KEY` is dead and can be removed from Vercel.
 
 ## 3. Architecture
 
@@ -26,8 +26,8 @@ Single HTML document. Sections top to bottom: hero (single CTA → `score.html`)
 Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` preview. "Try Ember Free" opens the live modal (`#emberModal`).
 - **`api/ember-chat.js`** — Claude `claude-sonnet-5`, `thinking: disabled` + `output_config.effort: low` for speed, streams text via `res.write`. Strips leading assistant turns (Claude needs a user-first message). Folds quiz score/focus into the system prompt.
 - **`api/_ember-prompt.js`** — `EMBER_SYSTEM_PROMPT`: warm relationship guide, short replies, guardrails (not a therapist/doctor, crisis → 988), nudge to book a call, bans dashes.
-- **`api/ember-voice.js`** — ElevenLabs TTS, `eleven_flash_v2_5`, voice `RSUcZp3ilp3WUZWLUwcY`. Returns `audio/mpeg`.
-- **`api/ember-transcribe.js`** — ElevenLabs Scribe STT (`scribe_v1`); receives base64 mic audio. Replaced the flaky Web Speech API.
+- **`api/ember-voice.js`** — xAI Grok TTS (`POST https://api.x.ai/v1/tts`), voice `eve` (built-ins: eve, ara, leo, rex, sal; supports voice cloning). Returns raw MP3 `audio/mpeg`. `EMBER_VOICE` const swaps the voice.
+- **`api/ember-transcribe.js`** — xAI Grok STT (`POST https://api.x.ai/v1/stt`, multipart `file` field, transcript in `text`); receives base64 mic audio. Replaced the flaky Web Speech API, then ElevenLabs Scribe.
 
 **Voice mode UX** (in the modal JS IIFE): tapping the mic enters a hands-free "orb view" — a pure glowing ember orb takes over the modal (dark ink bg, reacts to your mic level, breathes/pulses by listening/thinking/speaking state). Captions toggle (off by default), top-right X returns to the text chat.
 - **Hands-free loop**: `getUserMedia` with echo cancellation → MediaRecorder per turn → Web Audio AnalyserNode VAD auto-ends your turn after `SILENCE_MS` quiet → transcribe → chat → speak → listen again.
@@ -40,7 +40,7 @@ Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` previ
 - Hero images compressed.
 
 ## 5. What's next / launch blockers
-- **ROTATE both API keys** (Anthropic + ElevenLabs) — they were exposed in chat during dev. Then add rate limiting to `api/ember-chat.js`.
+- **ROTATE the Anthropic key** — it was exposed in chat during dev. (The xAI key is added fresh, never pasted in chat; ElevenLabs is dropped.) Then add rate limiting to `api/ember-chat.js`.
 - Wire Marriage Score lead capture to Miguel's custom CRM (currently `console.log` only).
 - Decide canonical home (Vercel vs rekindlemarriage.com) and point the real domain at the newest build.
 

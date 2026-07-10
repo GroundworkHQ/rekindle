@@ -1,8 +1,8 @@
-// Turns Ember's reply text into warm speech via ElevenLabs (same setup as Grace).
-// Reuses the Gateway ElevenLabs account. Swap EMBER_VOICE_ID for a distinct Ember
-// voice whenever we want her to sound different from Grace.
-const EMBER_VOICE_ID = 'RSUcZp3ilp3WUZWLUwcY';
-const ELEVEN_MODEL = 'eleven_flash_v2_5';
+// Turns Ember's reply text into warm speech via xAI Grok text-to-speech.
+// Voice names come from the xAI Voice Library (console.x.ai -> Voice -> Voice
+// Library), NOT the outdated docs (eve/ara/etc. don't exist). Swap EMBER_VOICE
+// for any name from the library or a cloned voice_id.
+const EMBER_VOICE = 'Carina';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,35 +15,33 @@ export default async function handler(req, res) {
     try { body = JSON.parse(body); } catch { body = null; }
   }
 
-  const text = body && typeof body.text === 'string' ? body.text.trim().slice(0, 1500) : '';
+  const text = body && typeof body.text === 'string' ? body.text.trim().slice(0, 15000) : '';
   if (!text) {
     res.status(400).send('Missing text');
     return;
   }
 
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
     res.status(500).send('Voice is not configured yet.');
     return;
   }
 
   try {
-    const r = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${EMBER_VOICE_ID}/stream`,
-      {
-        method: 'POST',
-        headers: {
-          'xi-api-key': apiKey,
-          'Content-Type': 'application/json',
-          Accept: 'audio/mpeg',
-        },
-        body: JSON.stringify({
-          text,
-          model_id: ELEVEN_MODEL,
-          voice_settings: { stability: 0.4, similarity_boost: 0.75 },
-        }),
-      }
-    );
+    const r = await fetch('https://api.x.ai/v1/tts', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        voice_id: EMBER_VOICE,
+        language: 'en',
+        output_format: { codec: 'mp3', sample_rate: 24000, bit_rate: 128000 },
+        speed: 1.0,
+      }),
+    });
 
     if (!r.ok) {
       res.status(502).send('Voice generation failed.');

@@ -1,6 +1,6 @@
-// Transcribes recorded mic audio via ElevenLabs speech to text (Scribe).
+// Transcribes recorded mic audio via xAI Grok speech-to-text.
 // The frontend records the mic and sends the audio as base64 so we never
-// depend on Chrome's built in speech service.
+// depend on the browser's built-in speech service.
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).send('Method not allowed');
@@ -19,21 +19,27 @@ export default async function handler(req, res) {
     return;
   }
 
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
     res.status(500).send('Voice is not configured yet.');
     return;
   }
 
+  // Name the file by container so xAI auto-detects it (webm on Chrome, mp4 on Safari).
+  const ext = mimeType.includes('mp4') || mimeType.includes('m4a') ? 'm4a'
+    : mimeType.includes('ogg') ? 'ogg'
+    : mimeType.includes('wav') ? 'wav'
+    : 'webm';
+
   try {
     const buffer = Buffer.from(audioB64, 'base64');
     const form = new FormData();
-    form.append('file', new Blob([buffer], { type: mimeType }), 'audio.webm');
-    form.append('model_id', 'scribe_v1');
+    form.append('language', 'en');   // all params must come before `file`
+    form.append('file', new Blob([buffer], { type: mimeType }), 'audio.' + ext);
 
-    const r = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+    const r = await fetch('https://api.x.ai/v1/stt', {
       method: 'POST',
-      headers: { 'xi-api-key': apiKey },
+      headers: { Authorization: `Bearer ${apiKey}` },
       body: form,
     });
 
