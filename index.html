@@ -2425,7 +2425,7 @@
           const end = Math.min(f32.length, w + win);
           let ss = 0; for (let i = w; i < end; i++) ss += f32[i] * f32[i];
           const wr = Math.sqrt(ss / Math.max(1, end - w));
-          rtEnv.push({ t: startAt + w / 24000, end: startAt + end / 24000, r: Math.min(1, Math.max(0, (wr - 0.006) * 12)) });
+          rtEnv.push({ t: startAt + w / 24000, end: startAt + end / 24000, r: Math.min(1, Math.max(0, (wr - 0.006) * 9)) });
         }
         rtSources.push(src);
         src.onended = function () { const i = rtSources.indexOf(src); if (i >= 0) rtSources.splice(i, 1); };
@@ -2436,7 +2436,7 @@
         const now = rtCtx ? rtCtx.currentTime : 0;
         while (rtEnv.length && rtEnv[0].end < now) rtEnv.shift();
         let hr = (rtEnv.length && rtEnv[0].t <= now) ? rtEnv[0].r : 0;
-        rtSpeakLvl = rtSpeakLvl * 0.55 + hr * 0.45;
+        rtSpeakLvl = rtSpeakLvl * 0.7 + hr * 0.3;
         setOrbLevel(Math.max(rtSpeakLvl, rtUserLvl));
         rtVisRAF = requestAnimationFrame(rtVisFrame);
       }
