@@ -1879,7 +1879,7 @@
         setTimeout(() => input.focus(), 60);
       }
       function closeModal() {
-        stopConvo();
+        stopRealtime();
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
@@ -2349,22 +2349,211 @@
         setOrbLevel(0);
       }
 
+      // ============================================================
+      // GROK REALTIME VOICE AGENT (hands-free orb mode)
+      // Streams mic PCM up, plays her PCM down over one WebSocket. The server
+      // handles turn-taking and barge-in natively. The orb reacts to her real
+      // audio. A deterministic safety net watches the user's live transcript and
+      // forces Ember to speak the 988 / DV-hotline line on crisis or abuse.
+      // ============================================================
+      let rtActive = false, rtWs = null;
+      let rtMicStream = null, rtCtx = null, rtProc = null, rtMicSrc = null, rtMute = null;
+      let rtPlayHead = 0, rtSources = [], rtEnv = [];
+      let rtVisRAF = null, rtSpeakLvl = 0, rtUserLvl = 0;
+      let rtSafetyHandled = false, rtGreeted = false;
+      let rtVoice = null, rtInstructions = null;
+
+      const CRISIS_RE = /(kill (myself|me)|end(ing)? (my life|it all|everything)|take my (own )?life|don'?t want to (be here|live|wake up)|not want to be here|no reason to (live|go on)|no point (in|to)? ?(living|life|anything|going on)|better off (dead|without me)|want to die|wish i (was|were) dead|hurt myself|harm myself|suicid)/i;
+      const ABUSE_RE = /(hits? me|hit me|beats? me|grab(s|bed)? (me|my)|shov(e|es|ed)|punch(es|ed)? (me|the wall)|threw .*(at me|glass|plate|thing|it)|throws things|breaks? things|slap(s|ped)? me|chok(e|ed|ing)|strangl|afraid of (him|her|my (husband|wife|partner|spouse))|scared of (him|her|my)|threaten(s|ed)? me|hurts? me|he'?s (violent|abusive)|she'?s (violent|abusive)|abus(e|ing|ive))/i;
+      const CRISIS_MSG = "I'm really glad you told me that, and I don't want you carrying it alone. Please reach out right now. In the US you can call or text 988 any time to reach the Suicide and Crisis Lifeline. If you might be in danger, please call 911. Will you reach out to them?";
+      const ABUSE_MSG = "Thank you for trusting me with that. You do not deserve to be hurt, and your safety comes first right now. Please reach out to the National Domestic Violence Hotline, you can call 1-800-799-7233 or text START to 88788, any time. If you are in immediate danger, call 911. Are you safe right now?";
+
+      function rtSend(o) { if (rtWs && rtWs.readyState === 1) rtWs.send(JSON.stringify(o)); }
+
+      function rtFlushPlayback() {
+        rtSources.forEach(function (s) { try { s.stop(); } catch (e) {} });
+        rtSources = []; rtEnv = [];
+        if (rtCtx) rtPlayHead = rtCtx.currentTime;
+      }
+
+      function rtPlayChunk(b64) {
+        if (!rtCtx) return;
+        let bin; try { bin = atob(b64); } catch (e) { return; }
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const pcm = new Int16Array(bytes.buffer);
+        if (!pcm.length) return;
+        const f32 = new Float32Array(pcm.length);
+        let sum = 0;
+        for (let i = 0; i < pcm.length; i++) { f32[i] = pcm[i] / 32768; sum += f32[i] * f32[i]; }
+        const buf = rtCtx.createBuffer(1, f32.length, 24000);
+        buf.getChannelData(0).set(f32);
+        const src = rtCtx.createBufferSource();
+        src.buffer = buf; src.connect(rtCtx.destination);
+        const now = rtCtx.currentTime;
+        if (rtPlayHead < now + 0.02) rtPlayHead = now + 0.02;
+        const startAt = rtPlayHead;
+        try { src.start(startAt); } catch (e) { return; }
+        rtPlayHead += buf.duration;
+        rtEnv.push({ t: startAt, end: startAt + buf.duration, r: Math.min(1, Math.sqrt(sum / f32.length) * 5) });
+        rtSources.push(src);
+        src.onended = function () { const i = rtSources.indexOf(src); if (i >= 0) rtSources.splice(i, 1); };
+      }
+
+      function rtVisFrame() {
+        if (!rtActive) { rtVisRAF = null; return; }
+        const now = rtCtx ? rtCtx.currentTime : 0;
+        while (rtEnv.length && rtEnv[0].end < now) rtEnv.shift();
+        let hr = (rtEnv.length && rtEnv[0].t <= now) ? rtEnv[0].r : 0;
+        rtSpeakLvl = rtSpeakLvl * 0.55 + hr * 0.45;
+        setOrbLevel(Math.max(rtSpeakLvl, rtUserLvl));
+        rtVisRAF = requestAnimationFrame(rtVisFrame);
+      }
+
+      function rtCheckSafety(transcript) {
+        if (rtSafetyHandled || !transcript) return;
+        const t = transcript.toLowerCase();
+        let msg = CRISIS_RE.test(t) ? CRISIS_MSG : (ABUSE_RE.test(t) ? ABUSE_MSG : null);
+        if (!msg) return;
+        rtSafetyHandled = true;
+        rtFlushPlayback();
+        rtSend({ type: 'input_audio_buffer.clear' });
+        rtSend({ type: 'conversation.item.create', item: { type: 'force_message', role: 'assistant', interruptible: false, content: [{ type: 'output_text', text: msg }] } });
+        if (capEmber) capEmber.textContent = msg;
+      }
+
+      function rtOnEvent(e) {
+        switch (e.type) {
+          case 'session.created':
+            rtSend({ type: 'session.update', session: {
+              voice: rtVoice || 'Carina',
+              instructions: rtInstructions || '',
+              turn_detection: { type: 'server_vad', silence_duration_ms: 500 },
+              audio: { input: { format: { type: 'audio/pcm', rate: 24000 }, transcription: { language_hint: 'en' } },
+                       output: { format: { type: 'audio/pcm', rate: 24000 } } }
+            }});
+            break;
+          case 'session.updated':
+            if (!rtGreeted) { rtGreeted = true; setOrbState('speaking');
+              rtSend({ type: 'response.create', response: { instructions: 'Warmly greet the person in one short, caring sentence and invite them to share what is on their mind.' } }); }
+            break;
+          case 'input_audio_buffer.speech_started':
+            rtSafetyHandled = false; rtFlushPlayback(); setOrbState('listening');
+            break;
+          case 'input_audio_buffer.speech_stopped':
+            setOrbState('thinking');
+            break;
+          case 'conversation.item.input_audio_transcription.updated':
+          case 'conversation.item.input_audio_transcription.completed':
+            if (e.transcript) { if (capUser) capUser.textContent = e.transcript; rtCheckSafety(e.transcript); }
+            break;
+          case 'response.created':
+            setOrbState('speaking'); if (capEmber && !rtSafetyHandled) capEmber.textContent = '';
+            break;
+          case 'response.output_audio_transcript.delta':
+            if (capEmber && !rtSafetyHandled && e.delta) capEmber.textContent += e.delta.replace(/\s*[—–]\s*/g, ', ');
+            break;
+          case 'response.output_audio.delta':
+            if (e.delta) rtPlayChunk(e.delta);
+            break;
+          case 'response.done':
+            setOrbState('listening');
+            break;
+        }
+      }
+
+      async function startRealtime() {
+        if (rtActive) return;
+        try {
+          rtMicStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        } catch (e) {
+          addBubble('ember', "I couldn't access your microphone. Allow mic access for this site, then tap the mic again. You can also just type.");
+          return;
+        }
+        let tok;
+        try {
+          const tr = await fetch('/api/ember-realtime-token', { method: 'POST' });
+          if (!tr.ok) throw new Error('token');
+          tok = await tr.json();
+        } catch (e) {
+          rtMicStream.getTracks().forEach(function (t) { t.stop(); }); rtMicStream = null;
+          addBubble('ember', "I'm having trouble starting voice right now. You can keep typing to me.");
+          return;
+        }
+        rtVoice = tok.voice; rtInstructions = tok.instructions; rtGreeted = false; rtSafetyHandled = false;
+        rtActive = true;
+        micBtn.classList.add('convo'); micBtn.title = 'Tap to end voice chat';
+        if (voiceView) voiceView.setAttribute('aria-hidden', 'false');
+        if (modalWindow) modalWindow.classList.add('voice-active');
+        if (capUser) capUser.textContent = ''; if (capEmber) capEmber.textContent = '';
+        setOrbState('thinking');
+
+        try { rtCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 }); }
+        catch (e) { try { rtCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e2) { stopRealtime(); return; } }
+        if (rtCtx.state === 'suspended') { try { rtCtx.resume(); } catch (e) {} }
+        rtPlayHead = rtCtx.currentTime;
+
+        rtMicSrc = rtCtx.createMediaStreamSource(rtMicStream);
+        rtProc = rtCtx.createScriptProcessor(2048, 1, 1);
+        rtMute = rtCtx.createGain(); rtMute.gain.value = 0;   // keep the processor alive without leaking mic to speakers
+        const inRate = rtCtx.sampleRate;
+        rtProc.onaudioprocess = function (ev) {
+          if (!rtActive) return;
+          const input = ev.inputBuffer.getChannelData(0);
+          let s = 0; for (let i = 0; i < input.length; i++) s += input[i] * input[i];
+          rtUserLvl = rtUserLvl * 0.5 + Math.min(1, Math.sqrt(s / input.length) * 6) * 0.5;
+          const ratio = inRate / 24000;
+          const outLen = Math.max(1, Math.floor(input.length / ratio));
+          const pcm = new Int16Array(outLen);
+          for (let i = 0; i < outLen; i++) { const v = Math.max(-1, Math.min(1, input[Math.floor(i * ratio)] || 0)); pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff; }
+          const bytes = new Uint8Array(pcm.buffer);
+          let bin = ''; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+          rtSend({ type: 'input_audio_buffer.append', audio: btoa(bin) });
+        };
+        rtMicSrc.connect(rtProc); rtProc.connect(rtMute); rtMute.connect(rtCtx.destination);
+
+        try { rtWs = new WebSocket('wss://api.x.ai/v1/realtime?model=grok-voice-latest', ['xai-client-secret.' + tok.token]); }
+        catch (e) { stopRealtime(); addBubble('ember', "Voice couldn't connect. You can keep typing to me."); return; }
+        rtWs.onmessage = function (m) { let e; try { e = JSON.parse(m.data); } catch (err) { return; } rtOnEvent(e); };
+        rtWs.onerror = function () {};
+        rtWs.onclose = function () { if (rtActive) stopRealtime(); };
+        if (rtVisRAF) cancelAnimationFrame(rtVisRAF);
+        rtVisRAF = requestAnimationFrame(rtVisFrame);
+      }
+
+      function stopRealtime() {
+        if (!rtActive && !rtWs) return;
+        rtActive = false;
+        if (rtVisRAF) { cancelAnimationFrame(rtVisRAF); rtVisRAF = null; }
+        rtFlushPlayback();
+        if (rtProc) { try { rtProc.disconnect(); } catch (e) {} rtProc.onaudioprocess = null; rtProc = null; }
+        if (rtMicSrc) { try { rtMicSrc.disconnect(); } catch (e) {} rtMicSrc = null; }
+        if (rtMute) { try { rtMute.disconnect(); } catch (e) {} rtMute = null; }
+        if (rtMicStream) { rtMicStream.getTracks().forEach(function (t) { t.stop(); }); rtMicStream = null; }
+        if (rtWs) { try { rtWs.close(); } catch (e) {} rtWs = null; }
+        if (rtCtx) { try { rtCtx.close(); } catch (e) {} rtCtx = null; }
+        rtUserLvl = 0; rtSpeakLvl = 0;
+        micBtn.classList.remove('convo', 'listening'); micBtn.title = 'Talk to Ember';
+        if (modalWindow) modalWindow.classList.remove('voice-active');
+        if (voiceView) voiceView.setAttribute('aria-hidden', 'true');
+        setOrbState(null); setOrbLevel(0);
+      }
+
       if (captionsToggle) captionsToggle.addEventListener('click', function () {
         captionsOn = !captionsOn;
         if (voiceView) voiceView.classList.toggle('captions-on', captionsOn);
         captionsToggle.setAttribute('aria-pressed', captionsOn ? 'true' : 'false');
       });
-      if (voiceEndBtn) voiceEndBtn.addEventListener('click', function () { stopConvo(); });
-      if (voiceCloseBtn) voiceCloseBtn.addEventListener('click', function () { stopConvo(); });
-      // Tap the orb while she's talking to interrupt her by hand (always works,
-      // even when the mic can't hear you over her voice).
+      if (voiceEndBtn) voiceEndBtn.addEventListener('click', function () { stopRealtime(); });
+      if (voiceCloseBtn) voiceCloseBtn.addEventListener('click', function () { stopRealtime(); });
+      // Tap the orb while she's talking to interrupt her by hand.
       if (orb) orb.addEventListener('click', function () {
-        if (convoMode && speakActive && !barged) bargeIn();
+        if (rtActive) { rtFlushPlayback(); rtSend({ type: 'input_audio_buffer.clear' }); setOrbState('listening'); }
       });
 
-      if (micBtn && navigator.mediaDevices && window.MediaRecorder) {
+      if (micBtn && navigator.mediaDevices && window.WebSocket && (window.AudioContext || window.webkitAudioContext)) {
         micBtn.addEventListener('click', function () {
-          if (convoMode) stopConvo(); else enterConvo();
+          if (rtActive) stopRealtime(); else startRealtime();
         });
       } else if (micBtn) {
         micBtn.style.display = 'none';
