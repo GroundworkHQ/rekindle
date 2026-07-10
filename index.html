@@ -1823,7 +1823,7 @@
       let audioCtx = null, analyser = null, vadData = null, vadRAF = null;
       let spokeThisTurn = false, lastSpeech = 0, turnStart = 0;
       const SPEECH_THRESHOLD = 0.02;   // RMS above this counts as speech
-      const SILENCE_MS = 1300;         // quiet this long after speech ends the turn
+      const SILENCE_MS = 1000;         // quiet this long after speech ends the turn
       const MAX_SILENCE_START = 12000; // no speech at all for this long ends the chat
 
       function blobToBase64(blob) {

@@ -62,8 +62,9 @@ export default async function handler(req, res) {
       model: 'claude-sonnet-5',
       max_tokens: 1024,
       system,
-      // Light, fast reasoning. Bump effort to 'medium' later for harder coaching prompts.
-      thinking: { type: 'adaptive' },
+      // Thinking off for fast, snappy replies (short warm chat, no deep reasoning
+      // needed). Switch to { type: 'adaptive' } if you want more thoughtful answers.
+      thinking: { type: 'disabled' },
       output_config: { effort: 'low' },
       messages: trimmed,
     });
