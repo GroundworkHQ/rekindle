@@ -2359,7 +2359,7 @@
       let rtActive = false, rtWs = null;
       let rtMicStream = null, rtCtx = null, rtProc = null, rtMicSrc = null, rtMute = null;
       let rtPlayHead = 0, rtSources = [], rtEnv = [];
-      let rtVisRAF = null, rtSpeakLvl = 0, rtUserLvl = 0;
+      let rtVisRAF = null, rtSpeakLvl = 0, rtUserLvl = 0, rtPeak = 0.06;
       let rtSafetyHandled = false, rtGreeted = false;
       let rtVoice = null, rtInstructions = null;
       let rtCurUser = '', rtCurEmber = '';   // in-progress turn text, committed to `history` for continuity
@@ -2415,7 +2415,11 @@
         const startAt = rtPlayHead;
         try { src.start(startAt); } catch (e) { return; }
         rtPlayHead += buf.duration;
-        rtEnv.push({ t: startAt, end: startAt + buf.duration, r: Math.min(1, Math.sqrt(sum / f32.length) * 5) });
+        // Normalize each chunk against a slowly-decaying peak so her louder
+        // syllables push the orb to full swing (adaptive to her overall volume).
+        const rawRms = Math.sqrt(sum / f32.length);
+        rtPeak = Math.max(rtPeak * 0.99, rawRms, 0.04);
+        rtEnv.push({ t: startAt, end: startAt + buf.duration, r: Math.min(1, (rawRms / rtPeak) * 1.15) });
         rtSources.push(src);
         src.onended = function () { const i = rtSources.indexOf(src); if (i >= 0) rtSources.splice(i, 1); };
       }
@@ -2506,6 +2510,7 @@
           return;
         }
         rtVoice = tok.voice; rtInstructions = tok.instructions; rtGreeted = false; rtSafetyHandled = false;
+        rtPeak = 0.06;
         rtActive = true;
         micBtn.classList.add('convo'); micBtn.title = 'Tap to end voice chat';
         if (voiceView) voiceView.setAttribute('aria-hidden', 'false');
