@@ -644,17 +644,19 @@
     .ember-chat-avatar {
       width: 38px;
       height: 38px;
-      background: var(--ember);
+      background: white;
+      border: 1px solid rgba(26,20,16,0.08);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.1rem;
-      font-style: italic;
-      color: white;
-      font-weight: 400;
       flex-shrink: 0;
+      overflow: hidden;
+    }
+    .ember-chat-avatar img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
     }
     .ember-chat-name {
       font-size: 0.88rem;
@@ -747,6 +749,131 @@
     .ember-typing.ember-typing-bubble span { background: rgba(255,255,255,0.7); }
     .ember-typing span:nth-child(2) { animation-delay: 0.2s; }
     .ember-typing span:nth-child(3) { animation-delay: 0.4s; }
+    .ember-chat-input {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.9rem 1rem;
+      background: white;
+      border-top: 1px solid rgba(26,20,16,0.07);
+    }
+    .ember-chat-input input {
+      flex: 1;
+      border: 1px solid rgba(26,20,16,0.12);
+      border-radius: 999px;
+      padding: 0.7rem 1.1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: #FAF7F2;
+      outline: none;
+    }
+    .ember-chat-input input:focus { border-color: var(--ember); }
+    .ember-chat-input button {
+      flex-shrink: 0;
+      width: 42px; height: 42px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--ember);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .ember-chat-input button:hover { background: #be4f22; }
+    .ember-chat-input button:disabled { opacity: 0.5; cursor: default; }
+    .ember-chat-input button svg { width: 18px; height: 18px; }
+
+    /* EMBER LIVE MODAL */
+    .ember-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+    .ember-modal.open { display: flex; }
+    .ember-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15,11,8,0.72);
+      backdrop-filter: blur(4px);
+    }
+    .ember-modal-window {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      height: min(640px, 88vh);
+      display: flex;
+      flex-direction: column;
+      background: #FAF7F2;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+      animation: emberPop 0.28s ease;
+    }
+    @keyframes emberPop {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: none; }
+    }
+    .ember-modal-window .ember-chat-body { flex: 1; height: auto; }
+    .ember-modal-headtext { flex: 1; }
+    .ember-modal-close {
+      background: none;
+      border: 0;
+      color: var(--muted);
+      font-size: 1.6rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 0.25rem;
+      transition: color 0.2s;
+    }
+    .ember-modal-close:hover { color: var(--ink); }
+    .ember-modal-voice {
+      background: none;
+      border: 0;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 0 0.4rem;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+    .ember-modal-voice svg { width: 20px; height: 20px; }
+    .ember-modal-voice .ember-voice-waves { opacity: 0; transition: opacity 0.2s; }
+    .ember-modal-voice:hover { color: var(--soft); }
+    .ember-modal-voice.on { color: var(--ember); }
+    .ember-modal-voice.on .ember-voice-waves { opacity: 1; }
+    .ember-chat-input .ember-mic {
+      flex-shrink: 0;
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(26,20,16,0.14);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--soft);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .ember-chat-input .ember-mic svg { width: 18px; height: 18px; }
+    .ember-chat-input .ember-mic:hover { border-color: var(--ember); color: var(--ember); background: transparent; }
+    .ember-chat-input .ember-mic.listening {
+      background: var(--ember);
+      color: white;
+      border-color: var(--ember);
+      animation: emberPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes emberPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(217,92,40,0.45); }
+      50% { box-shadow: 0 0 0 8px rgba(217,92,40,0); }
+    }
 
     /* SECTION: PROCESS */
     .process {
@@ -1236,7 +1363,7 @@
           </div>
         </div>
         <div class="ember-bottom reveal">
-          <a href="#cta" class="btn-ember">Try Ember Free</a>
+          <a href="#" class="btn-ember" data-ember-open>Try Ember Free</a>
           <p class="ember-note">No account needed to start</p>
         </div>
       </div>
@@ -1244,7 +1371,7 @@
       <div class="ember-ai-right reveal d1">
         <div class="ember-chat-window">
           <div class="ember-chat-header">
-            <div class="ember-chat-avatar">E</div>
+            <div class="ember-chat-avatar"><img src="rekindle-icon.png" alt="Rekindle" /></div>
             <div>
               <p class="ember-chat-name">Ember</p>
               <p class="ember-chat-status">AI Relationship Guide · Online</p>
@@ -1331,7 +1458,7 @@
       <div class="score-promo-meta">
         <span>10 questions</span>
         <span>~2 minutes</span>
-        <span>Private &amp; judgment-free</span>
+        <span>Private &amp; Judgment-Free</span>
       </div>
       <a href="score.html" class="btn-ember">See What's Still There</a>
     </div>
@@ -1375,6 +1502,35 @@
     <span class="footer-division">A division of Vitality Academies</span>
     <span class="footer-copy">© 2026 All rights reserved</span>
   </footer>
+
+  <!-- EMBER LIVE CHAT MODAL -->
+  <div class="ember-modal" id="emberModal" aria-hidden="true">
+    <div class="ember-modal-backdrop" id="emberModalBackdrop"></div>
+    <div class="ember-modal-window" role="dialog" aria-label="Chat with Ember" aria-modal="true">
+      <div class="ember-chat-header">
+        <div class="ember-chat-avatar"><img src="rekindle-icon.png" alt="Rekindle" /></div>
+        <div class="ember-modal-headtext">
+          <p class="ember-chat-name">Ember</p>
+          <p class="ember-chat-status">AI Relationship Guide · Online</p>
+        </div>
+        <button class="ember-modal-voice" id="emberVoiceToggle" aria-label="Toggle Ember's voice" aria-pressed="false" title="Turn voice on">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="ember-voice-waves" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+        </button>
+        <button class="ember-modal-close" id="emberModalClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="ember-chat-body" id="emberModalBody"></div>
+      <form class="ember-chat-input" id="emberModalForm" autocomplete="off">
+        <button type="button" class="ember-mic" id="emberMic" aria-label="Speak to Ember" title="Speak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>
+        </button>
+        <input id="emberModalInput" type="text" placeholder="Tell Ember what's on your mind..." aria-label="Message Ember" />
+        <button type="submit" id="emberModalSend" aria-label="Send message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </form>
+      <audio id="emberAudio" playsinline></audio>
+    </div>
+  </div>
 
   <script>
     // Scroll lock disabled for now. Re-enable by uncommenting the line below.
@@ -1456,7 +1612,7 @@
 
     
     const words = ["What","you","had","isn't","gone.","\n","It's","waiting."];
-    // Live Ember chat animation
+    // Embedded window: scripted preview conversation (no API calls, always free).
     const chatMessages = [
       { type: 'user', text: "We haven't really talked in weeks. I don't even know where to start.", delay: 1000 },
       { type: 'ember', text: "That takes courage to say. When did you first notice the distance starting?", delay: 4000 },
@@ -1465,47 +1621,247 @@
       { type: 'user', text: "I just don't want it to turn into another fight.", delay: 17000 },
       { type: 'ember', text: "I can help you prepare so it doesn't. Want to start by figuring out what you actually want your partner to understand?", delay: 21000 },
     ];
+    const previewBody = document.getElementById('emberChatBody');
+    let previewStarted = false;
 
-    const chatBody = document.getElementById('emberChatBody');
-    let chatStarted = false;
-
-    function showTyping(side) {
+    function previewTyping(side) {
       const typing = document.createElement('div');
       typing.className = side === 'user' ? 'ember-typing user-typing' : 'ember-typing ember-typing-bubble';
       typing.innerHTML = '<span></span><span></span><span></span>';
-      chatBody.appendChild(typing);
-      chatBody.scrollTop = chatBody.scrollHeight;
+      previewBody.appendChild(typing);
+      previewBody.scrollTop = previewBody.scrollHeight;
       return typing;
     }
 
-    function startChat() {
-      if (chatStarted) return;
-      chatStarted = true;
-
-      chatMessages.forEach((msg, i) => {
+    function startPreview() {
+      if (previewStarted || !previewBody) return;
+      previewStarted = true;
+      chatMessages.forEach((msg) => {
         const typingDelay = 2000;
-        // Show typing indicator before each message
         setTimeout(() => {
-          const typing = showTyping(msg.type);
+          const typing = previewTyping(msg.type);
           setTimeout(() => {
             typing.remove();
             const el = document.createElement('div');
-            el.className = `ember-msg ${msg.type}`;
+            el.className = 'ember-msg ' + msg.type;
             el.textContent = msg.text;
-            chatBody.appendChild(el);
+            previewBody.appendChild(el);
             requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
-            chatBody.scrollTop = chatBody.scrollHeight;
+            previewBody.scrollTop = previewBody.scrollHeight;
           }, typingDelay);
         }, msg.delay - typingDelay);
       });
     }
 
-    // Start when ember section scrolls into view
-    const chatObserver = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if (e.isIntersecting) { startChat(); chatObserver.disconnect(); } });
+    const previewObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { startPreview(); previewObserver.disconnect(); } });
     }, { threshold: 0.2 });
     const emberSection = document.getElementById('ember-ai');
-    if (emberSection) chatObserver.observe(emberSection);
+    if (emberSection) previewObserver.observe(emberSection);
+
+    // Live Ember modal (streams from /api/ember-chat on demand).
+    (function () {
+      const modal = document.getElementById('emberModal');
+      const chatBody = document.getElementById('emberModalBody');
+      const form = document.getElementById('emberModalForm');
+      const input = document.getElementById('emberModalInput');
+      const sendBtn = document.getElementById('emberModalSend');
+      const closeBtn = document.getElementById('emberModalClose');
+      const backdrop = document.getElementById('emberModalBackdrop');
+      if (!modal || !chatBody || !form || !input) return;
+
+      const history = [];
+      let sending = false;
+      let started = false;
+      let quiz = null;
+
+      function addBubble(role, text) {
+        const el = document.createElement('div');
+        el.className = 'ember-msg ' + (role === 'user' ? 'user' : 'ember');
+        el.textContent = text;
+        chatBody.appendChild(el);
+        requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('visible')));
+        chatBody.scrollTop = chatBody.scrollHeight;
+        return el;
+      }
+
+      function showTyping() {
+        const t = document.createElement('div');
+        t.className = 'ember-typing ember-typing-bubble';
+        t.innerHTML = '<span></span><span></span><span></span>';
+        chatBody.appendChild(t);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        return t;
+      }
+
+      function startConversation() {
+        if (started) return;
+        started = true;
+        const opener = quiz
+          ? "Hey, I'm Ember. I saw you just took the check-up. However it landed, showing up here says a lot. What's sitting with you right now?"
+          : "Hey, I'm Ember, your relationship guide. Whatever is on your mind, big or small, you can start wherever feels right. What's going on?";
+        addBubble('ember', opener);
+        history.push({ role: 'assistant', content: opener });
+      }
+
+      function openModal(q) {
+        if (q) quiz = q;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        startConversation();
+        setTimeout(() => input.focus(), 60);
+      }
+      function closeModal() {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      async function send(text) {
+        text = (text || '').trim();
+        if (sending || !text) return;
+        sending = true;
+        input.value = '';
+        if (sendBtn) sendBtn.disabled = true;
+
+        addBubble('user', text);
+        history.push({ role: 'user', content: text });
+
+        const typing = showTyping();
+        let replyEl = null;
+        let reply = '';
+
+        try {
+          const res = await fetch('/api/ember-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: history, quiz }),
+          });
+          if (!res.ok || !res.body) throw new Error('bad response');
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            if (!chunk) continue;
+            if (!replyEl) { typing.remove(); replyEl = addBubble('ember', ''); }
+            reply += chunk;
+            replyEl.textContent = reply;
+            chatBody.scrollTop = chatBody.scrollHeight;
+          }
+        } catch (e) {
+          if (!replyEl) addBubble('ember', "I'm having trouble reaching my thoughts right now. Give me a moment and try again.");
+        } finally {
+          if (typing.parentNode) typing.remove();
+          if (reply) { history.push({ role: 'assistant', content: reply }); speak(reply); }
+          sending = false;
+          if (sendBtn) sendBtn.disabled = false;
+          input.focus();
+        }
+      }
+
+      // Voice: input via Web Speech API, output via /api/ember-voice (ElevenLabs).
+      const audio = document.getElementById('emberAudio');
+      const voiceToggle = document.getElementById('emberVoiceToggle');
+      const micBtn = document.getElementById('emberMic');
+      let voiceOn = false;
+
+      function setVoice(on) {
+        voiceOn = on;
+        if (voiceToggle) {
+          voiceToggle.classList.toggle('on', on);
+          voiceToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+          voiceToggle.title = on ? 'Voice on' : 'Turn voice on';
+        }
+        if (!on && audio) audio.pause();
+      }
+      if (voiceToggle) voiceToggle.addEventListener('click', function () { setVoice(!voiceOn); });
+
+      async function speak(text) {
+        if (!voiceOn || !audio || !text) return;
+        try {
+          const r = await fetch('/api/ember-voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+          });
+          if (!r.ok) return;
+          const url = URL.createObjectURL(await r.blob());
+          audio.src = url;
+          audio.onended = function () { URL.revokeObjectURL(url); };
+          audio.play().catch(function () {});
+        } catch (e) {}
+      }
+
+      // Speech to text for the input (browser built in; absent in Firefox).
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR && micBtn) {
+        const rec = new SR();
+        rec.lang = 'en-US';
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
+        let listening = false;
+        let micError = false;
+        rec.onstart = function () { console.log('[mic] start'); };
+        rec.onaudiostart = function () { console.log('[mic] audiostart'); };
+        rec.onspeechstart = function () { console.log('[mic] speechstart'); };
+        rec.onresult = function (e) { console.log('[mic] result', e.results[0][0].transcript); input.value = e.results[0][0].transcript; };
+        rec.onnomatch = function () { console.log('[mic] nomatch'); };
+        rec.onend = function () {
+          console.log('[mic] end (micError=' + micError + ', value="' + input.value + '")');
+          listening = false;
+          micBtn.classList.remove('listening');
+          if (!micError && input.value.trim()) send(input.value);
+          micError = false;
+        };
+        rec.onerror = function (e) {
+          const code = e && e.error;
+          console.log('[mic] error:', code, e && e.message);
+          micError = true;
+          listening = false;
+          micBtn.classList.remove('listening');
+          if (code === 'not-allowed' || code === 'service-not-allowed') {
+            addBubble('ember', "I need microphone access to hear you. Allow the mic for this site in your browser, then tap the mic again. You can always just type instead.");
+          } else if (code === 'audio-capture') {
+            addBubble('ember', "I couldn't reach a working microphone. Check your input device in your sound settings, then try again. Typing works too.");
+          } else if (code === 'network') {
+            addBubble('ember', "My speech recognition couldn't reach the network just now. You can type instead, that always works.");
+          } else if (code && code !== 'no-speech' && code !== 'aborted') {
+            addBubble('ember', "Something went wrong with the mic (" + code + "). Typing works too.");
+          }
+          // 'no-speech' and 'aborted' end quietly.
+        };
+        micBtn.addEventListener('click', function () {
+          if (listening) { rec.stop(); return; }
+          try { input.value = ''; micError = false; rec.start(); listening = true; micBtn.classList.add('listening'); console.log('[mic] started'); }
+          catch (err) { console.log('[mic] start threw:', err && err.message); }
+        });
+      } else if (micBtn) {
+        micBtn.style.display = 'none';
+      }
+
+      form.addEventListener('submit', function (e) { e.preventDefault(); send(input.value); });
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+      if (backdrop) backdrop.addEventListener('click', closeModal);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+      // Any element with data-ember-open opens the live modal.
+      document.querySelectorAll('[data-ember-open]').forEach(function (el) {
+        el.addEventListener('click', function (e) { e.preventDefault(); openModal(); });
+      });
+      window.openEmber = openModal;
+
+      // Auto-open with quiz context when arriving from the Marriage Health Score.
+      const params = new URLSearchParams(location.search);
+      if (params.get('chat') === '1') {
+        const s = parseInt(params.get('score'), 10);
+        const q = Number.isFinite(s) ? { score: s, focus: params.get('focus') || undefined } : null;
+        openModal(q);
+      }
+    })();
 
     // Ticker drag to scroll
     const tickerWrap = document.getElementById('tickerWrap');

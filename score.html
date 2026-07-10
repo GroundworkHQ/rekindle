@@ -166,7 +166,7 @@
     <div class="meta">
       <div><span class="dot"></span> 10 questions</div>
       <div><span class="dot"></span> ~2 minutes</div>
-      <div><span class="dot"></span> Private &amp; judgment-free</div>
+      <div><span class="dot"></span> Private &amp; Judgment-Free</div>
     </div>
     <div class="startrow">
       <button class="btn btn-primary" onclick="start()">Start the check-up →</button>
@@ -391,7 +391,8 @@ function finish(){
   $("focusLine").textContent=PILLAR_COPY[weakest][tier(ps[weakest])];
 
   $("bookBtn").href=CONFIG.BOOKING_URL;
-  $("emberBtn").href=CONFIG.EMBER_URL;
+  // Hand off the score and weakest area so Ember can open with context.
+  $("emberBtn").href="index.html?score="+overall+"&focus="+encodeURIComponent(PILLARS[weakest])+"&chat=1#ember-ai";
 }
 
 function validEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
