@@ -1971,9 +1971,30 @@
           voiceToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
           voiceToggle.title = on ? 'Voice on' : 'Turn voice on';
         }
-        if (!on && audio) audio.pause();
+        if (!on) { if (audio) audio.pause(); stopSpeaking(); }
       }
-      if (voiceToggle) voiceToggle.addEventListener('click', function () { setVoice(!voiceOn); });
+      if (voiceToggle) voiceToggle.addEventListener('click', function () {
+        const turningOn = !voiceOn;
+        setVoice(turningOn);
+        // Turning the speaker on reads her latest message aloud right away.
+        if (turningOn && !convoMode && !sending && !speakActive) {
+          const lastEmber = [].concat(history).reverse().find(function (m) { return m.role === 'assistant'; });
+          if (lastEmber && lastEmber.content) speakFullText(lastEmber.content);
+        }
+      });
+
+      // Speak a full message out loud (her greeting or any standalone line),
+      // chunked into sentences so she starts sooner. In a hands-free chat, this
+      // hands off to listening once she finishes.
+      function speakFullText(text) {
+        if (!voiceOn || !text) { if (convoMode) startTurn(); return; }
+        startSpeaking();
+        let from = 0, c;
+        while ((c = nextSpeakChunk(text, from))) { from += c.len; if (c.text) enqueueSpeak(c.text); }
+        const rem = text.slice(from).trim();
+        if (rem) enqueueSpeak(rem);
+        endSpeakingInput();
+      }
 
       // Ember voice output. In a hands-free chat we speak sentence by sentence
       // as the reply streams in, so she starts talking after the first sentence
@@ -2237,7 +2258,15 @@
         if (capUser) capUser.textContent = '';
         if (capEmber) capEmber.textContent = '';
         setOrbState('thinking');
-        startTurn();
+        // Greet out loud first, then start listening. If there's no greeting
+        // yet or voice somehow off, just start listening.
+        const lastEmber = [].concat(history).reverse().find(function (m) { return m.role === 'assistant'; });
+        if (lastEmber && lastEmber.content) {
+          if (capEmber) capEmber.textContent = lastEmber.content;
+          speakFullText(lastEmber.content);
+        } else {
+          startTurn();
+        }
       }
 
       function stopConvo() {
