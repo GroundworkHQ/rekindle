@@ -59,15 +59,15 @@ export default async function handler(req, res) {
 
   try {
     const stream = client.messages.stream({
-      model: 'claude-sonnet-5',
+      model: 'claude-haiku-4-5',
       max_tokens: 1024,
       // Cache the (long, static-per-conversation) system prompt so turns after
       // the first skip reprocessing it — cuts time-to-first-token noticeably.
       system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
       // Thinking off for fast, snappy replies (short warm chat, no deep reasoning
       // needed). Switch to { type: 'adaptive' } if you want more thoughtful answers.
+      // (Haiku 4.5 doesn't support output_config.effort, so it's omitted.)
       thinking: { type: 'disabled' },
-      output_config: { effort: 'low' },
       messages: trimmed,
     });
 
