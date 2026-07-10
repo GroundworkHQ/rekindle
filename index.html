@@ -2531,7 +2531,10 @@
           if (!rtActive) return;
           const input = ev.inputBuffer.getChannelData(0);
           let s = 0; for (let i = 0; i < input.length; i++) s += input[i] * input[i];
-          rtUserLvl = rtUserLvl * 0.5 + Math.min(1, Math.sqrt(s / input.length) * 6) * 0.5;
+          // Drop a small noise floor then amplify, so your voice swings the orb
+          // hard while silence stays flat (noiseSuppression keeps the floor low).
+          const urms = Math.sqrt(s / input.length);
+          rtUserLvl = rtUserLvl * 0.5 + Math.min(1, Math.max(0, (urms - 0.006) * 12)) * 0.5;
           const ratio = inRate / 24000;
           const outLen = Math.max(1, Math.floor(input.length / ratio));
           const pcm = new Int16Array(outLen);
