@@ -40,6 +40,8 @@ export default async function handler(req, res) {
         language: 'en',
         output_format: { codec: 'mp3', sample_rate: 24000, bit_rate: 128000 },
         speed: 1.0,
+        // Bias synthesis toward starting sooner (0-2, higher = lower latency).
+        optimize_streaming_latency: 2,
       }),
     });
 

@@ -2073,7 +2073,7 @@
       let chatAbort = null;            // aborts an in-flight reply on barge-in
       let bargeRAF = null, bargeStart = 0, echoFloor = 0.02;
       const SPEECH_THRESHOLD = 0.02;   // RMS above this counts as speech
-      const SILENCE_MS = 1000;         // quiet this long after speech ends the turn
+      const SILENCE_MS = 700;          // quiet this long after speech ends the turn
       const MAX_SILENCE_START = 12000; // no speech at all for this long ends the chat
       const BARGE_MIN = 0.03;          // absolute floor so silence never interrupts
       const BARGE_FACTOR = 1.9;        // your voice must beat the leaked echo by this much

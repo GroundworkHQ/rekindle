@@ -61,7 +61,9 @@ export default async function handler(req, res) {
     const stream = client.messages.stream({
       model: 'claude-sonnet-5',
       max_tokens: 1024,
-      system,
+      // Cache the (long, static-per-conversation) system prompt so turns after
+      // the first skip reprocessing it — cuts time-to-first-token noticeably.
+      system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
       // Thinking off for fast, snappy replies (short warm chat, no deep reasoning
       // needed). Switch to { type: 'adaptive' } if you want more thoughtful answers.
       thinking: { type: 'disabled' },
