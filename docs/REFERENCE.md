@@ -24,15 +24,16 @@ Single HTML document. Sections top to bottom: hero (single CTA → `score.html`)
 
 ### Ember AI (live chat + voice)
 Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` preview. "Try Ember Free" opens the live modal (`#emberModal`).
-- **`api/ember-chat.js`** — Claude `claude-sonnet-5`, `thinking: disabled` + `output_config.effort: low` for speed, streams text via `res.write`. Strips leading assistant turns (Claude needs a user-first message). Folds quiz score/focus into the system prompt.
+- **`api/ember-chat.js`** — Claude `claude-haiku-4-5` (swapped from `claude-sonnet-5` for speed; quality held up since warmth lives in the prompt — revert is one line), `thinking: disabled`, system prompt cached via `cache_control` ephemeral (cuts repeat-turn TTFB), streams text via `res.write`. Strips leading assistant turns (Claude needs a user-first message). Folds quiz score/focus into the system prompt. NOTE: Haiku rejects `output_config.effort` — do not re-add it.
 - **`api/_ember-prompt.js`** — `EMBER_SYSTEM_PROMPT`: warm relationship guide, short replies, guardrails (not a therapist/doctor, crisis → 988), nudge to book a call, bans dashes.
 - **`api/ember-voice.js`** — xAI Grok TTS (`POST https://api.x.ai/v1/tts`), voice **`Carina`** (soft, empathetic, soothing). Returns raw MP3 `audio/mpeg`. `EMBER_VOICE` const swaps the voice. NOTE: voice names come from the console Voice Library (e.g. Carina, Ara, Celeste, Eve), case-sensitive — the public docs' names (eve/ara/leo/rex/sal lowercase) are WRONG and an invalid voice_id returns a misleading "Incorrect API key" error.
 - **`api/ember-transcribe.js`** — xAI Grok STT (`POST https://api.x.ai/v1/stt`, multipart `file` field, transcript in `text`); receives base64 mic audio. Replaced the flaky Web Speech API, then ElevenLabs Scribe.
 
 **Voice mode UX** (in the modal JS IIFE): tapping the mic enters a hands-free "orb view" — a pure glowing ember orb takes over the modal (dark ink bg, reacts to your mic level, breathes/pulses by listening/thinking/speaking state). Captions toggle (off by default), top-right X returns to the text chat.
 - **Hands-free loop**: `getUserMedia` with echo cancellation → MediaRecorder per turn → Web Audio AnalyserNode VAD auto-ends your turn after `SILENCE_MS` quiet → transcribe → chat → speak → listen again.
-- **Streaming speech**: replies are spoken sentence-by-sentence as they stream (audio fetched ahead of playback) so she starts talking after the first sentence.
+- **Streaming speech**: replies are spoken as they stream (audio fetched ahead of playback). The FIRST spoken chunk breaks early (first comma/clause or ~55-char cap) so she starts talking ~1-2s sooner; later chunks are full sentences. Same path speaks her greeting when voice is turned on.
 - **Barge-in** (two ways): talk over her (adaptive echo-floor trigger cuts her off + aborts the reply) OR tap the orb to interrupt by hand. Both confirmed working on device.
+- **Latency**: pipeline is transcribe → Claude → speak in series (~4s start-to-voice floor). Optimized via prompt caching, Haiku, short-first-clause, and `SILENCE_MS` 600ms. Streaming STT (transcribe-while-talking, the only ~1s lever left) was investigated and PARKED: xAI's STT WebSocket requires proxying through a backend (key can't be exposed client-side; ephemeral tokens are realtime-Voice-Agent only), and Vercel can't host a persistent WebSocket — it'd need a new always-on proxy service (e.g. Railway) + raw-PCM browser capture. Not worth ~1s unless revisited.
 
 ## 4. What's built
 - Full landing page + Marriage Health Score funnel, live on Vercel.
