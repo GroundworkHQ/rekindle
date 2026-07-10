@@ -1904,6 +1904,7 @@
         let reply = '';
         const wantSpeech = voiceOn;
         let spokenUpto = 0;
+        let firstChunk = true;
         barged = false;
         if (wantSpeech) startSpeaking();
         chatAbort = new AbortController();
@@ -1933,9 +1934,9 @@
             // talking without waiting for the whole reply.
             if (wantSpeech && !barged) {
               let c;
-              while ((c = nextSpeakChunk(reply, spokenUpto))) {
+              while ((c = nextSpeakChunk(reply, spokenUpto, firstChunk))) {
                 spokenUpto += c.len;
-                if (c.text) enqueueSpeak(c.text);
+                if (c.text) { enqueueSpeak(c.text); firstChunk = false; }
               }
             }
           }
@@ -1989,8 +1990,8 @@
       function speakFullText(text) {
         if (!voiceOn || !text) { if (convoMode) startTurn(); return; }
         startSpeaking();
-        let from = 0, c;
-        while ((c = nextSpeakChunk(text, from))) { from += c.len; if (c.text) enqueueSpeak(c.text); }
+        let from = 0, c, first = true;
+        while ((c = nextSpeakChunk(text, from, first))) { from += c.len; if (c.text) { enqueueSpeak(c.text); first = false; } }
         const rem = text.slice(from).trim();
         if (rem) enqueueSpeak(rem);
         endSpeakingInput();
@@ -2007,10 +2008,22 @@
       let activeUrl = null;
       let clipResolve = null;
 
-      // Pull the next complete sentence out of the streamed reply.
-      function nextSpeakChunk(full, from) {
+      // Pull the next speakable chunk out of the streamed reply. TTS time scales
+      // hard with length, so the FIRST chunk breaks early (at the first clause /
+      // comma, or a ~55 char cap) to get her talking ~1-2s sooner; later chunks
+      // use full sentences so she flows naturally.
+      function nextSpeakChunk(full, from, aggressive) {
         const rest = full.slice(from);
-        const m = rest.match(/^[\s\S]*?[.!?…](?=["'’”)\]]?(?:\s|$))/);
+        let m;
+        if (aggressive) {
+          m = rest.match(/^[\s\S]*?[,;:.!?…](?=["'’”)\]]?(?:\s|$))/);
+          if (!m && rest.length > 55) {
+            const cut = rest.slice(0, 55).lastIndexOf(' ');
+            if (cut > 18) m = [rest.slice(0, cut + 1)];
+          }
+        } else {
+          m = rest.match(/^[\s\S]*?[.!?…](?=["'’”)\]]?(?:\s|$))/);
+        }
         if (!m) return null;
         const seg = m[0];
         return { text: seg.trim().length >= 2 ? seg.trim() : '', len: seg.length };
@@ -2094,7 +2107,7 @@
       let chatAbort = null;            // aborts an in-flight reply on barge-in
       let bargeRAF = null, bargeStart = 0, echoFloor = 0.02;
       const SPEECH_THRESHOLD = 0.02;   // RMS above this counts as speech
-      const SILENCE_MS = 700;          // quiet this long after speech ends the turn
+      const SILENCE_MS = 600;          // quiet this long after speech ends the turn
       const MAX_SILENCE_START = 12000; // no speech at all for this long ends the chat
       const BARGE_MIN = 0.03;          // absolute floor so silence never interrupts
       const BARGE_FACTOR = 1.9;        // your voice must beat the leaked echo by this much
