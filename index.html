@@ -1796,48 +1796,73 @@
         } catch (e) {}
       }
 
-      // Speech to text for the input (browser built in; absent in Firefox).
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SR && micBtn) {
-        const rec = new SR();
-        rec.lang = 'en-US';
-        rec.interimResults = false;
-        rec.maxAlternatives = 1;
-        let listening = false;
-        let micError = false;
-        rec.onstart = function () { console.log('[mic] start'); };
-        rec.onaudiostart = function () { console.log('[mic] audiostart'); };
-        rec.onspeechstart = function () { console.log('[mic] speechstart'); };
-        rec.onresult = function (e) { console.log('[mic] result', e.results[0][0].transcript); input.value = e.results[0][0].transcript; };
-        rec.onnomatch = function () { console.log('[mic] nomatch'); };
-        rec.onend = function () {
-          console.log('[mic] end (micError=' + micError + ', value="' + input.value + '")');
-          listening = false;
+      // Voice input: record the mic and transcribe it server side via
+      // /api/ember-transcribe (ElevenLabs). This avoids Chrome's built in
+      // speech service, which is unreliable. Tap to start, tap again to send.
+      let mediaRecorder = null;
+      let recChunks = [];
+      let recording = false;
+      let recTimer = null;
+
+      function blobToBase64(blob) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onloadend = function () {
+            const r = String(reader.result || '');
+            const comma = r.indexOf(',');
+            resolve(comma >= 0 ? r.slice(comma + 1) : r);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      async function transcribeAndSend(blob) {
+        try {
+          const b64 = await blobToBase64(blob);
+          const r = await fetch('/api/ember-transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio: b64, mimeType: blob.type || 'audio/webm' }),
+          });
+          if (!r.ok) { addBubble('ember', "I couldn't quite catch that. Give it another try, or type it out."); return; }
+          const data = await r.json();
+          const text = ((data && data.text) || '').trim();
+          if (text) send(text);
+          else addBubble('ember', "I didn't catch anything that time. Try again, or type it out.");
+        } catch (e) {
+          addBubble('ember', "Something went wrong hearing you. You can type instead, that always works.");
+        }
+      }
+
+      async function startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          recChunks = [];
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
+          mediaRecorder.onstop = function () {
+            if (recTimer) { clearTimeout(recTimer); recTimer = null; }
+            stream.getTracks().forEach(function (t) { t.stop(); });
+            recording = false;
+            micBtn.classList.remove('listening');
+            if (recChunks.length) transcribeAndSend(new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' }));
+          };
+          mediaRecorder.start();
+          recording = true;
+          micBtn.classList.add('listening');
+          recTimer = setTimeout(function () { if (recording && mediaRecorder) mediaRecorder.stop(); }, 60000);
+        } catch (e) {
+          recording = false;
           micBtn.classList.remove('listening');
-          if (!micError && input.value.trim()) send(input.value);
-          micError = false;
-        };
-        rec.onerror = function (e) {
-          const code = e && e.error;
-          console.log('[mic] error:', code, e && e.message);
-          micError = true;
-          listening = false;
-          micBtn.classList.remove('listening');
-          if (code === 'not-allowed' || code === 'service-not-allowed') {
-            addBubble('ember', "I need microphone access to hear you. Allow the mic for this site in your browser, then tap the mic again. You can always just type instead.");
-          } else if (code === 'audio-capture') {
-            addBubble('ember', "I couldn't reach a working microphone. Check your input device in your sound settings, then try again. Typing works too.");
-          } else if (code === 'network') {
-            addBubble('ember', "My speech recognition couldn't reach the network just now. You can type instead, that always works.");
-          } else if (code && code !== 'no-speech' && code !== 'aborted') {
-            addBubble('ember', "Something went wrong with the mic (" + code + "). Typing works too.");
-          }
-          // 'no-speech' and 'aborted' end quietly.
-        };
+          addBubble('ember', "I couldn't access your microphone. Allow mic access for this site, or just type. Typing always works.");
+        }
+      }
+
+      if (micBtn && navigator.mediaDevices && window.MediaRecorder) {
         micBtn.addEventListener('click', function () {
-          if (listening) { rec.stop(); return; }
-          try { input.value = ''; micError = false; rec.start(); listening = true; micBtn.classList.add('listening'); console.log('[mic] started'); }
-          catch (err) { console.log('[mic] start threw:', err && err.message); }
+          if (recording) { if (mediaRecorder) mediaRecorder.stop(); }
+          else startRecording();
         });
       } else if (micBtn) {
         micBtn.style.display = 'none';
