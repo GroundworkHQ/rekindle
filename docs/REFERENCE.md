@@ -10,7 +10,7 @@ Marketing landing page for Rekindle, Dr. Peter DeBry's marriage coaching program
 - Serverless API — Vercel Node functions in `api/` (NOT Edge; the Anthropic SDK needs Node built-ins). `package.json` has `@anthropic-ai/sdk`, `type: module`.
 - Local assets: `hero.mp4`, `couple-distance.jpg`, `couple-truth.jpg`, `debry.jpg`, `rekindle-logo.*`, `rekindle-icon.png`.
 - Hosting: **Vercel** — repo `GroundworkHQ/rekindle` auto-deploys to **rekindle-ebon-mu.vercel.app** on push to `main`.
-- Rekindle's real branded domain **rekindlemarriage.com** (`Ooak21/rekindlemarriage.com`, GitHub Pages) runs an OLDER build. Canonical-home decision still open (see §7).
+- Rekindle's real branded domain **rekindlemarriage.com** (apex + www) is now served by this Vercel `rekindle` project over HTTPS — migration off GitHub Pages COMPLETE 2026-07-10 (see §7). The old `Ooak21/rekindlemarriage.com` GitHub Pages repo has been released (custom domain / CNAME file removed).
 - Secrets: `ANTHROPIC_API_KEY` (chat), `XAI_API_KEY` (Grok voice — TTS + STT). Local dev in gitignored `.env.local`; prod in Vercel env vars. ElevenLabs was fully replaced by xAI (2026-07-09); `ELEVENLABS_API_KEY` is dead and can be removed from Vercel.
 
 ## 3. Architecture
@@ -45,7 +45,7 @@ Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` previ
 ## 5. What's next / launch blockers
 - **ROTATE the Anthropic key** — it was exposed in chat during dev. (The xAI key is added fresh, never pasted in chat; ElevenLabs is dropped.) Then add rate limiting to `api/ember-chat.js` AND `api/ember-realtime-token.js` (voice minutes cost real money, ~$3/hr).
 - Wire Marriage Score lead capture to Miguel's custom CRM (currently `console.log` only).
-- Decide canonical home (Vercel vs rekindlemarriage.com) and point the real domain at the newest build.
+- ~~Decide canonical home~~ — DONE 2026-07-10: rekindlemarriage.com (apex + www) now serves this build from Vercel. See §7.
 - Optional cleanup: remove the dead old hands-free client code + `api/ember-transcribe.js` once realtime is proven in the wild.
 
 ## 6. Conventions
@@ -55,6 +55,6 @@ Embedded landing window (`#emberChatBody`) shows a scripted `chatMessages` previ
 - Mobile reviewed 2026-07-10 at 390px: hero (hamburger nav), Ember orb voice view, and testimonial all good. Testimonial was left-clustered on mobile → now centered/balanced (media query at the `.testimonial` block). Rest of the page not yet swept in depth.
 
 ## 7. Open decisions
-- **Canonical home MIGRATION IN PROGRESS (2026-07-10):** moving rekindlemarriage.com from GitHub Pages (Ooak21) to the Vercel `rekindle` project. Can't stay on Pages — the serverless `/api/ember-*` functions require Vercel. Both apex + www added to the Vercel project. Pending: GoDaddy DNS (apex `@` A → `76.76.21.21`; `www` CNAME → `cname.vercel-dns.com`), then remove the custom domain from the Ooak21 Pages settings. Vercel auto-issues SSL after propagation.
+- **Canonical home MIGRATION COMPLETE (2026-07-10):** rekindlemarriage.com (apex + www) now serves this build from the Vercel `rekindle` project over HTTPS. Had to leave GitHub Pages — the serverless `/api/ember-*` functions require Vercel. What was done: released the domain from GitHub Pages (deleted the CNAME file in `Ooak21/rekindlemarriage.com`, commit b716d3c) → set GoDaddy DNS record-based (nameservers stay at domaincontrol.com): apex `@` A → `76.76.21.21` (removed the 4 GitHub `185.199.108-111.153` A records), `www` CNAME → `cname.vercel-dns.com` → Vercel auto-verified and issued SSL for both (each needed a manual "Refresh / Renew Certificate" nudge in the Vercel domains dashboard). Email left fully intact (Microsoft 365 MX/SPF/DMARC/SRV). DNS GOTCHA: `cname.vercel-dns.com` resolves to a MIX of `76.76.21.x` + `66.33.60.x` IPs — both are Vercel edge, the `66.x` is not a stray record; don't chase it.
 - Whether Ember AI stays inline or becomes a shared widget across IBS clients.
 - Whether Ember gets its own distinct ElevenLabs voice (currently shares Grace's).
