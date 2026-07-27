@@ -1,24 +1,32 @@
 # Rekindle — Claude Code context
 
-## Read first
-Before working, read **`docs/REFERENCE.md`** — the source of truth for this project. This file is just the quick orientation.
+## ⚠️ Read first: this is NOT the live Rekindle site
 
-## What this is
-Landing page for Rekindle, Dr. Peter DeBry's marriage coaching program (an IBS client). Single-page site with a dark ink / ember-orange look and an Ember AI chat section.
+The live site is **`~/rekindlemarriage.com`** (repo `Ooak21/rekindlemarriage.com`, branch `main`,
+GitHub Pages + `CNAME`). Do the work there, not here.
 
-## Stack
-- Static single-file site: `index.html` (~52KB, all inline CSS/JS) plus local assets.
-- Assets: `hero.mp4`, `couple-distance.jpg`, `couple-truth.jpg`, `debry.jpg`, `rekindle-logo.png/.jpg`, `rekindle-icon.png`.
-- No build step, no framework. Preview by opening the file / serving the folder locally.
+This repo (`GroundworkHQ/rekindle`) is the earlier dev/app version. Its `docs/REFERENCE.md` was
+**retired 2026-07-27** because it documented a Vercel architecture the product has since moved
+off of; see that stub for the correction table.
 
-## Page structure (sections in `index.html`)
-hero → truth → objections → Ember AI (`#ember-ai`) → process (`#how`) → testimonial → physician bio (`#physician`) → CTA (`#cta`).
+## What Rekindle is
+Marriage coaching program, an IBS client. Dark ink / ember-orange brand, single-page site with a
+Marriage Health Score quiz funnel and the **Ember AI** relationship guide (text + realtime voice).
+**Nellie Reedy is the face of the brand** — she replaced Dr. Peter DeBry entirely in July 2026.
+
+## Where things actually live now
+- Site, `/bootcamp/`, `/crm/`, `score.html`: `~/rekindlemarriage.com`. Static, no build; push to
+  `main` and Pages deploys.
+- Ember backend: **Supabase edge functions** on the shared IBS project `jtifhcvbgxqwlywugvjv`
+  (`rekindle-ember-chat`, `-token`, `-tts`, `-stt`, and `rekindle-reserve`). Not Vercel, not Convex.
+- Ember design notes (two-brain split, safety net, voice gotchas): memory `reference_ember_ai_design`.
 
 ## Conventions & rules
 - Secrets live in env vars only, never in code. Rotate immediately if exposed.
-- Commit + push at the end of each session to back up. Commit messages end with the Co-Authored-By line.
+- Brand: dark ink background, ember orange accent. **No em dashes anywhere in copy.**
 - Keep everything self-contained in `index.html` unless there's a reason to split.
-- Brand: dark ink background, ember orange accent.
+- Rekindle commits credit **Miguel** as co-author. Never credit Claude.
+- Don't auto-push; wait for explicit instruction.
 
 ## Current priority
 <!-- What we're working on right now. -->
